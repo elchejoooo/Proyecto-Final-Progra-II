@@ -59,25 +59,37 @@ public class ScannerUtil
      * @return el TipoTransaccion que el usuario, ingreso y que este en enum TipoTransaccion
      * @param mensaje es lo que se le muestra al usuario
      */
-    public static TipoTransaccion capturarTipoTransaccion(String mensaje) 
+     public static TipoTransaccion capturarTipoTransaccion(String mensaje)
     {
-        while (true) 
+        while (true)
         {
             System.out.println(mensaje + "... Opciones:");
-            for (TipoTransaccion tipoTransaccion : TipoTransaccion.values()) 
+            for (TipoTransaccion tipoTransaccion : TipoTransaccion.values())
             {
                 System.out.println("- " + tipoTransaccion.name());
             }
-            String entrada = capturarTexto("Cual quieres?");
-            try 
+
+            String entrada = capturarTexto("¿Cuál quieres?");
+            entrada = entrada.trim();
+
+            
+            if (entrada.contains(" "))
+            {
+                System.out.println("No se permiten espacios entre letras. Intenta nuevamente.");
+                continue;
+            }
+
+            try
             {
                 return TipoTransaccion.valueOf(entrada.toUpperCase());
-            } catch (IllegalArgumentException e) 
+            }
+            catch (IllegalArgumentException e)
             {
-                System.out.println("Tipo de transaccion no encontrada: " + entrada + "; Intenta de nuevo.");
+                System.out.println("Tipo de transacción no encontrada: " + entrada + ". Intenta de nuevo.");
             }
         }
     }
+
     /**
      * Este metodo nos ayuda a capturar un TipoCuenta que ingrese el usuario.
      * Nos auxiliamos del enum TipoCuenta.
@@ -85,22 +97,33 @@ public class ScannerUtil
      * @return el TipoCuenta que el usuario ingreso, y que este en enum TipoCuenta
      * @param mensaje es lo que se le muestra al usuario
      */
-    public static TipoCuenta capturarTipoCuenta(String mensaje) 
+    public static TipoCuenta capturarTipoCuenta(String mensaje)
     {
-        while (true) 
+        while (true)
         {
             System.out.println(mensaje + "... Opciones:");
-            for (TipoCuenta tipoCuenta : TipoCuenta.values()) 
+            for (TipoCuenta tipoCuenta : TipoCuenta.values())
             {
                 System.out.println("- " + tipoCuenta.name());
             }
-            String entrada = capturarTexto("Cual quieres?");
-            try 
+
+            String entrada = capturarTexto("¿Cuál quieres?");
+            entrada = entrada.trim();
+
+            
+            if (entrada.contains(" "))
+            {
+                System.out.println("No se permiten espacios entre letras. Intenta nuevamente.");
+                continue;
+            }
+
+            try
             {
                 return TipoCuenta.valueOf(entrada.toUpperCase());
-            } catch (IllegalArgumentException e) 
+            }
+            catch (IllegalArgumentException e)
             {
-                System.out.println("Tipo de cuenta no encontrada: " + entrada + "; Intenta de nuevo.");
+                System.out.println("Tipo de cuenta no encontrada: " + entrada + ". Intenta de nuevo.");
             }
         }
     }

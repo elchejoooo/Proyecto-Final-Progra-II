@@ -13,16 +13,18 @@ public class Transaccion
     private double monto;
     private LocalDateTime fechaHora;
     private String numeroCuenta; // La cuenta afectada
+    private String idTransaccion; // Identificador único de la transacción
 
     // Constructor
-    public Transaccion(TipoTransaccion tipoTransaccion, double monto, String numeroCuenta) 
+    public Transaccion(TipoTransaccion tipoTransaccion, double monto, String numeroCuenta, String idTransaccion) 
     {
-        validarCampos(tipoTransaccion, monto, numeroCuenta);
+        validarCampos(tipoTransaccion, monto, numeroCuenta,idTransaccion);
 
         this.tipoTransaccion = tipoTransaccion;
         this.monto = monto;
         this.numeroCuenta = numeroCuenta;
         this.fechaHora = LocalDateTime.now();
+        this.idTransaccion = idTransaccion;
     }
 
     // Métodos
@@ -38,13 +40,15 @@ public class Transaccion
     /**
      * Valida los campos antes de crear una transacción.
      */
-    private void validarCampos(TipoTransaccion tipoTransaccion, double monto, String numeroCuenta)
+    private void validarCampos(TipoTransaccion tipoTransaccion, double monto, String numeroCuenta, String idTransaccion)
     {
         if (tipoTransaccion == null)
             throw new CampoInvalidoExcepcion("El tipo de transacción no puede ser nulo.");
 
         if (numeroCuenta == null || numeroCuenta.trim().isEmpty())
             throw new CampoInvalidoExcepcion("El número de cuenta no puede estar vacío.");
+        if (idTransaccion == null || idTransaccion.trim().isEmpty())
+            throw new CampoInvalidoExcepcion("El ID de la transacción no puede estar vacío.");
 
         validarMonto(monto);
     }
@@ -97,5 +101,9 @@ public class Transaccion
         if (numeroCuenta == null || numeroCuenta.trim().isEmpty())
             throw new CampoInvalidoExcepcion("El número de cuenta no puede estar vacío.");
         this.numeroCuenta = numeroCuenta;
+    }
+
+    public String getIdTransaccion() {
+        return idTransaccion;
     }
 }
