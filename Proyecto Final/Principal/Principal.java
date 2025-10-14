@@ -10,13 +10,31 @@ public class Principal
 {
    public static void main(String[] args) 
    {
-    Cliente cliente = new Cliente("12345678", "Juan Pérez", "555-1234", LocalDate.of(1990, 5, 15));
-    System.out.println(cliente.mostrarDetallesCliente());
-   
+   // Demo rápido para comprobar ATM.mostrarInformacionCuentas()
+   Cliente cliente = new Cliente("12345678", "Juan Pérez", "555-1234", LocalDate.of(1990, 5, 15));
+   System.out.println(cliente.mostrarDetallesCliente());
 
-    TipoCuenta tipoCuenta = Utilitaria.ScannerUtil.capturarTipoCuenta("Ingrese el tipo de cuenta");
-    Cuenta cuenta = new Cuenta("000123456789", "1234", tipoCuenta, cliente);
-    System.out.println(cuenta.mostrarDetallesCuenta());
+   // Crear una cuenta manualmente usando un tipo por defecto (AHORRO) si existe
+   Enums.TipoCuenta tipoCuenta = Enums.TipoCuenta.AHORRO;
+   Cuenta cuenta = new Cuenta("000123456789", "1234", tipoCuenta, cliente);
+   cliente.agregarCuenta(cuenta);
+   System.out.println(cuenta.mostrarDetallesCuenta());
+
+   // Crear un ATM y agregar un par de transacciones para la misma cuenta y otra distinta
+   Servicios.ATM atm = new Servicios.ATM();
+   Enums.TipoTransaccion deposito = Enums.TipoTransaccion.DEPOSITO;
+   Enums.TipoTransaccion retiro = Enums.TipoTransaccion.RETIRO;
+
+   Modelos.Transaccion t1 = new Modelos.Transaccion(deposito, 1500.00, cuenta.getNumeroCuenta(), "TXN001");
+   Modelos.Transaccion t2 = new Modelos.Transaccion(retiro, 200.00, cuenta.getNumeroCuenta(), "TXN002");
+   Modelos.Transaccion t3 = new Modelos.Transaccion(deposito, 500.00, "999888777666", "TXN003"); // otra cuenta ficticia
+
+   atm.agregarTransaccion(t1);
+   atm.agregarTransaccion(t2);
+   atm.agregarTransaccion(t3);
+
+   System.out.println("\nMostrando información agrupada por cuentas desde el ATM:");
+   atm.mostrarInformacionCuentas();
 
 
     

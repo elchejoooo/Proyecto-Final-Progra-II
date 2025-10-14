@@ -37,7 +37,35 @@ public class ATM
     }
     public void mostrarInformacionCuentas()
     {
-        
+        // Agrupar transacciones por número de cuenta y mostrar un resumen por cuenta
+        java.util.Map<String, java.util.List<Transaccion>> porCuenta = new java.util.HashMap<>();
+
+        for (Transaccion transaccion : listaTransacciones) {
+            String numCuenta = transaccion.getNumeroCuenta();
+            if (!porCuenta.containsKey(numCuenta)) {
+                porCuenta.put(numCuenta, new ArrayList<>());
+            }
+            porCuenta.get(numCuenta).add(transaccion);
+        }
+
+        if (porCuenta.isEmpty()) {
+            System.out.println("No hay transacciones registradas.");
+            return;
+        }
+
+        for (java.util.Map.Entry<String, java.util.List<Transaccion>> entry : porCuenta.entrySet()) {
+            String numeroCuenta = entry.getKey();
+            java.util.List<Transaccion> transacciones = entry.getValue();
+
+            System.out.println("====================================");
+            System.out.println("Resumen para la cuenta: " + numeroCuenta);
+            System.out.println("Número de transacciones: " + transacciones.size());
+
+            // Mostrar cada transacción usando el método de la clase Transaccion
+            for (Transaccion t : transacciones) {
+                System.out.println(t.mostrarDetallesTransaccion());
+            }
+        }
     }
     
 }
