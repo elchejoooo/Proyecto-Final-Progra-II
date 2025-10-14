@@ -43,12 +43,12 @@ public class ATM
         if (c == null)
             throw new CuentaNoEncontradaExcepcion(numeroCuenta);
 
-        int intentos = this.intentosFallidos.getOrDefault(numeroCuenta, 0);
+        int intentos = this.intentosFallidos.getOrDefault(numeroCuenta, 0);//se obtienen los intentos fallidos actuales de esta cuenta
         if (intentos >= MAX_INTENTOS) {
-            throw new PinInvalidoExcepcion("La cuenta " + numeroCuenta + " está bloqueada por múltiples intentos fallidos.");
+            throw new PinInvalidoExcepcion("La cuenta " + numeroCuenta + " está bloqueada por múltiples intentos fallidos.");// si se falla 3 veces seguidas, la cuentase bloquea
         }
 
-        if (!c.getPin().equals(pin)) {
+        if (!c.getPin().equals(pin)) {// si el pin es incorrecto entonces se aumenta el contador de fallos
             intentos++;
             this.intentosFallidos.put(numeroCuenta, intentos);
             int restantes = MAX_INTENTOS - intentos;
@@ -59,9 +59,9 @@ public class ATM
             }
         }
 
-        // Autenticación exitosa: resetear contador de intentos y establecer sesión
+        // al tener exito la autentificacion se resetea el contador de intentos y se inicia la sesion
         this.intentosFallidos.remove(numeroCuenta);
-        this.cuentaActiva = c;
+        this.cuentaActiva = c;//nos indica que la cuenta esta en sesion activa
     }
 
     /**
@@ -69,7 +69,7 @@ public class ATM
      */
     public void desbloquearCuenta(String numeroCuenta)
     {
-        this.intentosFallidos.remove(numeroCuenta);
+        this.intentosFallidos.remove(numeroCuenta);// resetea el contador de intentos fallidos
     }
 
     public int getIntentosFallidos(String numeroCuenta)
@@ -99,6 +99,67 @@ public class ATM
         this.listaTransacciones.add(transaccion);
     }
 
+    /**
+     * Deposita un monto en la cuenta indicada. Registra la transacción y actualiza saldo.
+     */
+    public void depositar(String numeroCuenta, double monto, String idTransaccion)
+    {
+        Cuenta c = this.cuentas.get(numeroCuenta);
+        if (c == null)
+            throw new CuentaNoEncontradaExcepcion(numeroCuenta);
+
+        Transaccion t = new Transaccion(Enums.TipoTransaccion.DEPOSITO, monto, numeroCuenta, idTransaccion);//aqui se crea la transaccion al enviar los datos del tipo de transaccion, monto, numero de cuenta y id unico
+        c.aplicarDeposito(monto, t);
+        agregarTransaccion(t);
+    }
+
+    /**
+     * Retira un monto de la cuenta indicada. Registra la transacción y actualiza saldo.
+     */
+    public void retirar(String numeroCuenta, double monto, String idTransaccion)
+    {
+        Cuenta c = this.cuentas.get(numeroCuenta);
+        if (c == null)
+            throw new CuentaNoEncontradaExcepcion(numeroCuenta);
+
+        Transaccion t = new Transaccion(Enums.TipoTransaccion.RETIRO, monto, numeroCuenta, idTransaccion);//se envian daytos de la trnasaccion, se crea la transaccion
+        c.aplicarRetiro(monto, t);
+        agregarTransaccion(t);
+    }
+
+    /**
+     * Devuelve el saldo actual de la cuenta indicada.
+     */
+    public double consultarSaldo(String numeroCuenta)
+    {
+        Cuenta c = this.cuentas.get(numeroCuenta);
+        if (c == null)//verifica que la cuenta exista, sino lanza la excepcion
+            throw new CuentaNoEncontradaExcepcion(numeroCuenta);
+        return c.getSaldo();
+    }
+
+    /**
+     * Transfiere monto de una cuenta a otra (si ambas existen y hay fondos suficientes).
+     */
+    public void transferir(String numeroOrigen, String numeroDestino, double monto, String idTransaccionOrigen, String idTransaccionDestino)
+    {
+        Cuenta origen = this.cuentas.get(numeroOrigen);//se obtiene la cuenta que envia los fondos
+        Cuenta destino = this.cuentas.get(numeroDestino);//se obtiene la cuenta que recibe los fondos
+        if (origen == null)// si no hay cuenta de origen, salta la excepcion
+            throw new CuentaNoEncontradaExcepcion(numeroOrigen);
+        if (destino == null)//ni no hay cuenta de destino, salta la excepcion
+            throw new CuentaNoEncontradaExcepcion(numeroDestino);
+
+        // Retiro de origen y depósito en destino con transacciones separadas
+        Transaccion tRetiro = new Transaccion(Enums.TipoTransaccion.RETIRO, monto, numeroOrigen, idTransaccionOrigen);//aplica el retiro en la cuenta de origen
+        origen.aplicarRetiro(monto, tRetiro);//se aplica el retiro a la e origen
+        this.agregarTransaccion(tRetiro);
+
+        Transaccion tDep = new Transaccion(Enums.TipoTransaccion.DEPOSITO, monto, numeroDestino, idTransaccionDestino);
+        destino.aplicarDeposito(monto, tDep);//aplica deposito a la de destino
+        this.agregarTransaccion(tDep);
+    }
+
     public void eliminarTransaccion(Transaccion transaccion)
     {
         this.listaTransacciones.remove(transaccion);
@@ -117,25 +178,25 @@ public class ATM
     }
     public void mostrarInformacionCuentas()
     {
-        // Agrupar transacciones por número de cuenta y mostrar un resumen por cuenta
+        // aqui agrupamos las transacciones con respecto a su numero de cuenta
         java.util.Map<String, java.util.List<Transaccion>> porCuenta = new java.util.HashMap<>();
 
         for (Transaccion transaccion : listaTransacciones) {
-            String numCuenta = transaccion.getNumeroCuenta();
-            if (!porCuenta.containsKey(numCuenta)) {
+            String numCuenta = transaccion.getNumeroCuenta();// se obtiene el numero de cuenta de la transaccion
+            if (!porCuenta.containsKey(numCuenta)) {// si no existe la cuenta en el hashmap, se crea una  nueva entrada con una lista vacia 
                 porCuenta.put(numCuenta, new ArrayList<>());
             }
-            porCuenta.get(numCuenta).add(transaccion);
-        }
+            porCuenta.get(numCuenta).add(transaccion);// se agrega la transaccion a la lista de esa cuenta
+        }// cada cuenta tiene su lista de transacciones asociada
 
-        if (porCuenta.isEmpty()) {
+        if (porCuenta.isEmpty()) {// si no hay transacciones, se le hace saber al usuario
             System.out.println("No hay transacciones registradas.");
             return;
         }
 
-        for (java.util.Map.Entry<String, java.util.List<Transaccion>> entry : porCuenta.entrySet()) {
-            String numeroCuenta = entry.getKey();
-            java.util.List<Transaccion> transacciones = entry.getValue();
+        for (java.util.Map.Entry<String, java.util.List<Transaccion>> entry : porCuenta.entrySet()) {// aqui se recorre cada entrada del hashmap
+            String numeroCuenta = entry.getKey();// se obtiene el numero de la cuenta
+            java.util.List<Transaccion> transacciones = entry.getValue();// se obtiene la lista de transacciones de esa cuenta
 
             System.out.println("====================================");
             System.out.println("Resumen para la cuenta: " + numeroCuenta);
@@ -147,6 +208,38 @@ public class ATM
             }
         }
     }
+
     
-    
+    // Operaciones convenientes que usan la cuenta autenticada
+    public void retiroAutenticado(double monto, String idTransaccion) {
+        if (!estaAutenticado())
+            throw new SesionNoIniciadaExcepcion();
+
+        String numero = getCuentaActiva().getNumeroCuenta();
+        retirar(numero, monto, idTransaccion);
+    }
+
+    public void depositoAutenticado(double monto, String idTransaccion) {
+        if (!estaAutenticado())
+            throw new SesionNoIniciadaExcepcion();
+
+        String numero = getCuentaActiva().getNumeroCuenta();
+        depositar(numero, monto, idTransaccion);
+    }
+
+    public double consultarSaldoAutenticado() {
+        if (!estaAutenticado())
+            throw new SesionNoIniciadaExcepcion();
+
+        return consultarSaldo(getCuentaActiva().getNumeroCuenta());
+    }
+
+    public void transferirAutenticado(String numeroDestino, double monto, String idTransaccionOrigen, String idTransaccionDestino) {
+        if (!estaAutenticado())
+            throw new SesionNoIniciadaExcepcion();
+
+        String numeroOrigen = getCuentaActiva().getNumeroCuenta();
+        transferir(numeroOrigen, numeroDestino, monto, idTransaccionOrigen, idTransaccionDestino);
+    }
+
 }

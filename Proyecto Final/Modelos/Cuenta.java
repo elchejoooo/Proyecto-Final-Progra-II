@@ -55,6 +55,33 @@ public class Cuenta
     }
 
     /**
+     * Aplica un depósito a la cuenta: valida monto, actualiza saldo y registra la transacción.
+     */
+    public void aplicarDeposito(double monto, Transaccion transaccion)
+    {
+        if (monto <= 0)
+            throw new Excepciones.MontoInvalidoExcepcion("El monto del depósito debe ser mayor que cero.");
+
+        this.saldo += monto;
+        agregarTransaccion(transaccion);
+    }
+
+    /**
+     * Aplica un retiro a la cuenta: valida monto y fondos, actualiza saldo y registra la transacción.
+     */
+    public void aplicarRetiro(double monto, Transaccion transaccion)
+    {
+        if (monto <= 0)
+            throw new Excepciones.MontoInvalidoExcepcion("El monto del retiro debe ser mayor que cero.");
+
+        if (this.saldo < monto)
+            throw new Excepciones.FondosInsuficientesExcepcion(this.numeroCuenta);
+
+        this.saldo -= monto;
+        agregarTransaccion(transaccion);
+    }
+
+    /**
      * Valida que los campos no estén vacíos o nulos y que el PIN tenga formato correcto.
      */
     private void validarCampos(String numeroCuenta, String pin, TipoCuenta tipoCuenta, Cliente titular)
