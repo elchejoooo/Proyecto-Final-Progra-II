@@ -4,14 +4,94 @@ import java.util.ArrayList;
 import java.util.List;
 
 import Modelos.Transaccion;
+import Modelos.Cuenta;
+import Excepciones.CuentaNoEncontradaExcepcion;
+import Excepciones.PinInvalidoExcepcion;
+import Excepciones.SesionNoIniciadaExcepcion;
 
 public class ATM 
 {
     private List<Transaccion> listaTransacciones;
+    private java.util.Map<String, Cuenta> cuentas;
+    private Cuenta cuentaActiva; // sesión actual
+    private java.util.Map<String, Integer> intentosFallidos;
+    private final int MAX_INTENTOS = 3;
 
     public ATM()
     {
         this.listaTransacciones = new ArrayList<>();
+        this.cuentas = new java.util.HashMap<>();
+        this.cuentaActiva = null;
+    this.intentosFallidos = new java.util.HashMap<>();
+    }
+
+    /**
+     * Registra una cuenta en el ATM para poder autenticarla posteriormente.
+     */
+    public void registrarCuenta(Cuenta cuenta)
+    {
+        if (cuenta == null) return;
+        this.cuentas.put(cuenta.getNumeroCuenta(), cuenta);
+    }
+
+    /**
+     * Inicia sesión para la cuenta indicada si el PIN coincide. Lanza excepciones si falla.
+     */
+    public void iniciarSesion(String numeroCuenta, String pin)
+    {
+        Cuenta c = this.cuentas.get(numeroCuenta);
+        if (c == null)
+            throw new CuentaNoEncontradaExcepcion(numeroCuenta);
+
+        int intentos = this.intentosFallidos.getOrDefault(numeroCuenta, 0);
+        if (intentos >= MAX_INTENTOS) {
+            throw new PinInvalidoExcepcion("La cuenta " + numeroCuenta + " está bloqueada por múltiples intentos fallidos.");
+        }
+
+        if (!c.getPin().equals(pin)) {
+            intentos++;
+            this.intentosFallidos.put(numeroCuenta, intentos);
+            int restantes = MAX_INTENTOS - intentos;
+            if (restantes <= 0) {
+                throw new PinInvalidoExcepcion("PIN inválido. La cuenta ha sido bloqueada tras " + MAX_INTENTOS + " intentos fallidos.");
+            } else {
+                throw new PinInvalidoExcepcion("PIN inválido. Intentos restantes: " + restantes);
+            }
+        }
+
+        // Autenticación exitosa: resetear contador de intentos y establecer sesión
+        this.intentosFallidos.remove(numeroCuenta);
+        this.cuentaActiva = c;
+    }
+
+    /**
+     * Desbloquea los intentos fallidos para una cuenta (ej: administrador)
+     */
+    public void desbloquearCuenta(String numeroCuenta)
+    {
+        this.intentosFallidos.remove(numeroCuenta);
+    }
+
+    public int getIntentosFallidos(String numeroCuenta)
+    {
+        return this.intentosFallidos.getOrDefault(numeroCuenta, 0);
+    }
+
+    public void cerrarSesion()
+    {
+        this.cuentaActiva = null;
+    }
+
+    public boolean estaAutenticado()
+    {
+        return this.cuentaActiva != null;
+    }
+
+    public Cuenta getCuentaActiva()
+    {
+        if (!estaAutenticado())
+            throw new SesionNoIniciadaExcepcion();
+        return this.cuentaActiva;
     }
 
     public void agregarTransaccion(Transaccion transaccion)
@@ -67,5 +147,6 @@ public class ATM
             }
         }
     }
+    
     
 }

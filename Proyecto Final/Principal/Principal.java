@@ -2,7 +2,7 @@ package Principal;
 
 import java.time.LocalDate;
 
-import Enums.TipoCuenta;
+//import Enums.TipoCuenta;
 import Modelos.Cliente;
 import Modelos.Cuenta;
 
@@ -35,6 +35,29 @@ public class Principal
 
    System.out.println("\nMostrando información agrupada por cuentas desde el ATM:");
    atm.mostrarInformacionCuentas();
+
+   // Demostración interactiva: el usuario ingresa el PIN por consola
+   atm.registrarCuenta(cuenta); // registrar la cuenta para permitir autenticación
+   System.out.println("\nAutenticación interactiva. Escriba 'salir' para terminar.");
+   while (true) {
+      String entrada = Utilitaria.ScannerUtil.capturarTexto("Ingrese PIN para la cuenta " + cuenta.getNumeroCuenta() + ":");
+      if (entrada == null) break;
+      entrada = entrada.trim();
+      if (entrada.equalsIgnoreCase("salir")) {
+         System.out.println("Saliendo del intento de autenticación.");
+         break;
+      }
+
+      try {
+         atm.iniciarSesion(cuenta.getNumeroCuenta(), entrada);
+         System.out.println("Autenticación exitosa. Sesión iniciada para: " + atm.getCuentaActiva().getNumeroCuenta());
+         atm.cerrarSesion();
+         break; // salir tras autenticación exitosa
+      } catch (RuntimeException ex) {
+         System.out.println("Error: " + ex.getMessage());
+         // continuar el loop para permitir otro intento o 'salir'
+      }
+   }
 
 
     
