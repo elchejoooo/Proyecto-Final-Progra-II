@@ -38,87 +38,99 @@ public class Principal
    System.out.println("\nMostrando información agrupada por cuentas desde el ATM:");
    atm.mostrarInformacionCuentas();
 
-   // aqui registramos una cuenta para poder tener un inicio de sesion
-   atm.registrarCuenta(cuenta); 
-   System.out.println("\nInicio de sesión interactivo. Escriba 'salir' como número de cuenta para terminar.");
+   // Registramos la cuenta creada y otra adicional para pruebas de transferencia
+   atm.registrarCuenta(cuenta);
+   Cuenta cuenta2 = new Cuenta("000987654321", "4321", tipoCuenta, cliente);
+   cliente.agregarCuenta(cuenta2);
+   atm.registrarCuenta(cuenta2);
 
-   while (true) {// este while nos permite volver a intentar el inicio de sesion si fallamos inicialmente
-      String numero = Utilitaria.ScannerUtil.capturarTexto("Ingrese número de cuenta:");
-      if (numero == null) break;
-      numero = numero.trim();
-      if (numero.equalsIgnoreCase("salir")) {// si en la autentificacion escribimos salir, entonces se termina el programa
-         System.out.println("Saliendo del programa.");
-         break;
+   System.out.println("\nOperaciones por demanda: ingrese su cuenta y PIN antes de cada operación. Escriba 'salir' como número de cuenta para terminar.");
+
+   mainLoop:
+   while (true) {
+      System.out.println("\nMenú principal: \n1) Consultar saldo \n2) Depositar \n3) Retirar \n4) Transferir \n5) Salir");
+      String opcion = Utilitaria.ScannerUtil.capturarTexto("Elija una opción:");
+      if (opcion == null) break;
+      opcion = opcion.trim();
+
+      switch (opcion) {
+         case "1": // consultar saldo
+            try {
+               String numero = Utilitaria.ScannerUtil.capturarTexto("Ingrese número de cuenta (o 'salir'):");
+               if (numero == null) break mainLoop;
+               numero = numero.trim();
+               if (numero.equalsIgnoreCase("salir")) break mainLoop;
+               String pin = Utilitaria.ScannerUtil.capturarTexto("Ingrese PIN para la cuenta " + numero + ":");
+               double saldo = atm.consultarSaldoConPin(numero, pin);
+               System.out.println("Saldo: " + String.format("%.2f", saldo));
+            } catch (RuntimeException e) {
+               System.out.println("Error: " + e.getMessage());
+            }
+            break;
+         case "2": // depositar
+            try {
+               String numero = Utilitaria.ScannerUtil.capturarTexto("Ingrese número de cuenta para depositar (o 'salir'):");
+               if (numero == null) break mainLoop;
+               numero = numero.trim();
+               if (numero.equalsIgnoreCase("salir")) break mainLoop;
+               String montoStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese monto a depositar:");
+               double monto = Double.parseDouble(montoStr);
+               String pin = Utilitaria.ScannerUtil.capturarTexto("Ingrese PIN para autorizar el depósito:");
+               String idTx = "DEP_" + System.currentTimeMillis();
+               atm.depositarConPin(numero, pin, monto, idTx);
+               System.out.println("Depósito realizado. ID: " + idTx);
+            } catch (NumberFormatException e) {
+               System.out.println("Error: formato de número inválido.");
+            } catch (RuntimeException e) {
+               System.out.println("Error: " + e.getMessage());
+            }
+            break;
+         case "3": // retirar
+            try {
+               String numero = Utilitaria.ScannerUtil.capturarTexto("Ingrese número de cuenta para retirar (o 'salir'):");
+               if (numero == null) break mainLoop;
+               numero = numero.trim();
+               if (numero.equalsIgnoreCase("salir")) break mainLoop;
+               String montoStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese monto a retirar:");
+               double monto = Double.parseDouble(montoStr);
+               String pin = Utilitaria.ScannerUtil.capturarTexto("Ingrese PIN para autorizar el retiro:");
+               String idTx = "RET_" + System.currentTimeMillis();
+               atm.retirarConPin(numero, pin, monto, idTx);
+               System.out.println("Retiro realizado. ID: " + idTx);
+            } catch (NumberFormatException e) {
+               System.out.println("Error: formato de número inválido.");
+            } catch (RuntimeException e) {
+               System.out.println("Error: " + e.getMessage());
+            }
+            break;
+         case "4": // transferir
+            try {
+               String origen = Utilitaria.ScannerUtil.capturarTexto("Ingrese número de cuenta origen (o 'salir'):");
+               if (origen == null) break mainLoop;
+               origen = origen.trim();
+               if (origen.equalsIgnoreCase("salir")) break mainLoop;
+               String destino = Utilitaria.ScannerUtil.capturarTexto("Ingrese número de cuenta destino:");
+               if (destino == null) break mainLoop;
+               destino = destino.trim();
+               String montoStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese monto a transferir:");
+               double monto = Double.parseDouble(montoStr);
+               String pin = Utilitaria.ScannerUtil.capturarTexto("Ingrese PIN para autorizar la transferencia:");
+               String idOrig = "TR_ORIG_" + System.currentTimeMillis();
+               String idDest = "TR_DST_" + System.currentTimeMillis();
+               atm.transferirConPin(origen, pin, destino, monto, idOrig, idDest);
+               System.out.println("Transferencia realizada. IDs: " + idOrig + ", " + idDest);
+            } catch (NumberFormatException e) {
+               System.out.println("Error: formato de número inválido.");
+            } catch (RuntimeException e) {
+               System.out.println("Error: " + e.getMessage());
+            }
+            break;
+         case "5":
+            System.out.println("Saliendo.");
+            break mainLoop;
+         default:
+            System.out.println("Opción no válida.");
       }
-
-      //aqui pedimimos el pin de la cuenta para iniciar la sesion
-      String pin = Utilitaria.ScannerUtil.capturarTexto("Ingrese PIN para la cuenta " + numero + ":");
-      if (pin == null) break;
-      pin = pin.trim();
-
-      try {// este try catch nos permite intentar iniciar sesion 3 veces como maximo
-         atm.iniciarSesion(numero, pin);
-      } catch (RuntimeException ex) {
-         System.out.println("Fallo al iniciar sesión: " + ex.getMessage());
-         continue; // permitir intentar nuevamente
-      }
-
-      System.out.println("\nSesión iniciada para: " + numero);
-
-      // Menú simple
-      boolean salirMenu = false;
-      while (!salirMenu) {
-         System.out.println("\nElija una opción: \n1) Consultar saldo \n2) Depositar \n3) Retirar \n4) Cerrar sesión");
-         String opcion = Utilitaria.ScannerUtil.capturarTexto("Opción:");
-         if (opcion == null) break;
-         opcion = opcion.trim();
-
-         switch (opcion) {// menu con las opciones de operacion que tiene el usuario en su cuenta
-            case "1":
-               try {
-                  double saldo = atm.consultarSaldoAutenticado();
-                  System.out.println("Saldo actual: " + String.format("%.2f", saldo));
-               } catch (RuntimeException e) {
-                  System.out.println("Error: " + e.getMessage());
-               }
-               break;
-            case "2":
-               try {
-                  String montoStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese monto a depositar:");
-                  double monto = Double.parseDouble(montoStr);
-                  String idTx = "DEP_" + System.currentTimeMillis();// id unico baso en su deposito ya que no puede haber 2 depositos al mismo tiempo, es un generador de id
-                  atm.depositoAutenticado(monto, idTx);
-                  System.out.println("Depósito realizado. ID transacción: " + idTx);
-               } catch (NumberFormatException e) {
-                  System.out.println("Error: formato de número inválido.");
-               } catch (RuntimeException e) {
-                  System.out.println("Error: " + e.getMessage());
-               }
-               break;
-            case "3":
-               try {
-                  String montoStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese monto a retirar:");
-                  double monto = Double.parseDouble(montoStr);
-                  String idTx = "RET_" + System.currentTimeMillis();// Id unico basado en el tiempo actual ya que no se repite debido a que no puede haber dos transacciones al mismo tiempo
-                  atm.retiroAutenticado(monto, idTx);// esta linea hace el retiro basado en la cuenta que inicio sesion
-                  System.out.println("Retiro realizado. ID transacción: " + idTx);//aqui se muestra el id generado de la transaccion
-               } catch (NumberFormatException e) {
-                  System.out.println("Error: formato de número inválido.");// esta salta si el usuario ingresa algo que no es un numero en el apartado de monto
-               } catch (RuntimeException e) {
-                  System.out.println("Error: " + e.getMessage());
-               }
-               break;
-            case "4":
-               atm.cerrarSesion();
-               System.out.println("Sesión cerrada.");
-               salirMenu = true;
-               break;
-            default:
-               System.out.println("Opción no válida. Intente de nuevo.");
-         }
-      }
-
-      // Si el usuario cerró sesión en el menú, puede iniciar otra o salir
    }
 
 

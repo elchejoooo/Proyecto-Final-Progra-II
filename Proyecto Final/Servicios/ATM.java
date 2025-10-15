@@ -77,6 +77,35 @@ public class ATM
         return this.intentosFallidos.getOrDefault(numeroCuenta, 0);
     }
 
+    /**
+     * Valida PIN para operaciones puntuales (no inicia sesión). Actualiza contador de intentos.
+     */
+    private void validarPinParaOperacion(String numeroCuenta, String pin)
+    {
+        Cuenta c = this.cuentas.get(numeroCuenta);
+        if (c == null)
+            throw new CuentaNoEncontradaExcepcion(numeroCuenta);
+
+        int intentos = this.intentosFallidos.getOrDefault(numeroCuenta, 0);
+        if (intentos >= MAX_INTENTOS) {
+            throw new PinInvalidoExcepcion("La cuenta " + numeroCuenta + " está bloqueada por múltiples intentos fallidos.");
+        }
+
+        if (!c.getPin().equals(pin)) {
+            intentos++;
+            this.intentosFallidos.put(numeroCuenta, intentos);
+            int restantes = MAX_INTENTOS - intentos;
+            if (restantes <= 0) {
+                throw new PinInvalidoExcepcion("PIN inválido. La cuenta ha sido bloqueada tras " + MAX_INTENTOS + " intentos fallidos.");
+            } else {
+                throw new PinInvalidoExcepcion("PIN inválido. Intentos restantes: " + restantes);
+            }
+        }
+
+        // PIN correcto: resetear contador
+        this.intentosFallidos.remove(numeroCuenta);
+    }
+
     public void cerrarSesion()
     {
         this.cuentaActiva = null;
@@ -114,6 +143,15 @@ public class ATM
     }
 
     /**
+     * Depositar tras validar PIN del titular (operación puntual sin iniciar sesión).
+     */
+    public void depositarConPin(String numeroCuenta, String pin, double monto, String idTransaccion)
+    {
+        validarPinParaOperacion(numeroCuenta, pin);
+        depositar(numeroCuenta, monto, idTransaccion);
+    }
+
+    /**
      * Retira un monto de la cuenta indicada. Registra la transacción y actualiza saldo.
      */
     public void retirar(String numeroCuenta, double monto, String idTransaccion)
@@ -128,6 +166,15 @@ public class ATM
     }
 
     /**
+     * Retirar tras validar PIN del titular (operación puntual sin iniciar sesión).
+     */
+    public void retirarConPin(String numeroCuenta, String pin, double monto, String idTransaccion)
+    {
+        validarPinParaOperacion(numeroCuenta, pin);
+        retirar(numeroCuenta, monto, idTransaccion);
+    }
+
+    /**
      * Devuelve el saldo actual de la cuenta indicada.
      */
     public double consultarSaldo(String numeroCuenta)
@@ -136,6 +183,15 @@ public class ATM
         if (c == null)//verifica que la cuenta exista, sino lanza la excepcion
             throw new CuentaNoEncontradaExcepcion(numeroCuenta);
         return c.getSaldo();
+    }
+
+    /**
+     * Consultar saldo tras validar PIN del titular (operación puntual).
+     */
+    public double consultarSaldoConPin(String numeroCuenta, String pin)
+    {
+        validarPinParaOperacion(numeroCuenta, pin);
+        return consultarSaldo(numeroCuenta);
     }
 
     /**
@@ -158,6 +214,15 @@ public class ATM
         Transaccion tDep = new Transaccion(Enums.TipoTransaccion.DEPOSITO, monto, numeroDestino, idTransaccionDestino);
         destino.aplicarDeposito(monto, tDep);//aplica deposito a la de destino
         this.agregarTransaccion(tDep);
+    }
+
+    /**
+     * Transferir tras validar PIN del titular de la cuenta origen (operación puntual sin iniciar sesión).
+     */
+    public void transferirConPin(String numeroOrigen, String pinOrigen, String numeroDestino, double monto, String idTransaccionOrigen, String idTransaccionDestino)
+    {
+        validarPinParaOperacion(numeroOrigen, pinOrigen);
+        transferir(numeroOrigen, numeroDestino, monto, idTransaccionOrigen, idTransaccionDestino);
     }
 
     public void eliminarTransaccion(Transaccion transaccion)
