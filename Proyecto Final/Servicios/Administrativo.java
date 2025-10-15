@@ -119,14 +119,14 @@ public class Administrativo
 	{
 		Cuenta objetivo = null;
 		for (Cuenta c : cuentas) {
-			if (c.getNumeroCuenta().equals(numeroCuenta)) { objetivo = c; break; }
+			if (c.getNumeroCuenta().equals(numeroCuenta)) { objetivo = c; break; }//esto indica que se encontro la cuenta a eliminar
 		}
 		if (objetivo == null) return false;
 
 		// quitar de su titular
 		Cliente t = objetivo.getTitular();
 		if (t != null) {
-			t.getCuentas().removeIf(c -> c.getNumeroCuenta().equals(numeroCuenta));
+			t.getCuentas().removeIf(c -> c.getNumeroCuenta().equals(numeroCuenta));// aqui se quita la cuenta de la lista de cuentas del cliente
 		}
 
 		// quitar del ATM
