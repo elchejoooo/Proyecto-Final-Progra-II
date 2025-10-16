@@ -45,14 +45,12 @@ public class Principal
    cliente.agregarCuenta(cuenta2);
    atm.registrarCuenta(cuenta2);
 
-   System.out.println("\nMenú principal:\n1) Operaciones con cuenta\n2) Administrar cuentas\n3) Salir");
-
    mainLoop://mainloop es una etiqueta para poder salir de multiples while anidados
    //una etiqueta es un nombre que se le da a un bloque de codigo, en este caso a un while
    //para crear la etiqueta se escribe el nombre seguido de dos puntos, se debe usar break seguido del nombre de la etiqueta para salir
    // de todos los bloques anidados que estan dentro del bloque con etiqueta
    while (true) {
-      System.out.println("\nMenú principal:\n1) Operaciones con cuenta\n2) Administrar cuentas\n3) Salir");
+   System.out.println("\nMenú principal:\n1) Operaciones con cuenta\n2) Administrar cuentas\n3) Salir\n4) Visualizar Reportes");
       String mainOption = Utilitaria.ScannerUtil.capturarTexto("Elija una opción del menú principal:");
       if (mainOption == null) break;
       mainOption = mainOption.trim();
@@ -179,18 +177,17 @@ public class Principal
                      break;
                   case "3": // crear cuenta
                      try {
-                        String pin = capturarSinEspacios("Ingrese PIN (4 dígitos):");
+                        String idCliente = Utilitaria.ScannerUtil.capturarTexto("Ingrese ID del titular (para confirmar):");
                         String tipoStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese tipo de cuenta (AHORRO/MONETARIA):");
                         Enums.TipoCuenta tipo = Enums.TipoCuenta.valueOf(tipoStr.toUpperCase());
-                        String nombreTitular = Utilitaria.ScannerUtil.capturarTexto("Ingrese nombre completo del titular (tal como está registrado):");
-                        admin.crearCuentaAuto(pin, tipo, nombreTitular);
+                        admin.crearCuentaPorIdAuto(tipo, idCliente);
                      } catch (RuntimeException e) {
                         System.out.println("Error: " + e.getMessage());
                      }
                      break;
                   case "4": // eliminar cuenta
                      try {
-                        String numero = Utilitaria.ScannerUtil.capturarTexto("Ingrese número de cuenta a eliminar:");
+                        String numero = capturarSinEspacios("Ingrese número de cuenta a eliminar:");
                         boolean ok = admin.eliminarCuenta(numero);
                         System.out.println(ok ? "Cuenta eliminada." : "Cuenta no encontrada.");
                      } catch (RuntimeException e) {
@@ -207,6 +204,15 @@ public class Principal
          case "3":
             System.out.println("Saliendo.");
             break mainLoop;
+         case "4":
+            // visualizar reportes
+            try {
+               Servicios.Reportes r = new Servicios.Reportes();
+               r.menuReportes();
+            } catch (RuntimeException e) {
+               System.out.println("Error mostrando reportes: " + e.getMessage());
+            }
+            break;
          default:
             System.out.println("Opción no válida.");
       }
@@ -240,4 +246,4 @@ public class Principal
       }
    }
 
-} 
+}
