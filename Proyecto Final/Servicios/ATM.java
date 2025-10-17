@@ -160,7 +160,7 @@ public class ATM
     {
         Cuenta c = this.cuentas.get(numeroCuenta);
         if (c == null)
-            throw new CuentaNoEncontradaExcepcion(numeroCuenta);
+            throw new CuentaNoEncontradaExcepcion(numeroCuenta);//verifica que la cuenta exista, sino lanza la excepcion
 
         Transaccion t = new Transaccion(Enums.TipoTransaccion.RETIRO, monto, numeroCuenta, idTransaccion);//se envian daytos de la trnasaccion, se crea la transaccion
         c.aplicarRetiro(monto, t);
@@ -174,8 +174,8 @@ public class ATM
      */
     public void retirarConPin(String numeroCuenta, String pin, double monto, String idTransaccion)
     {
-        validarPinParaOperacion(numeroCuenta, pin);
-        retirar(numeroCuenta, monto, idTransaccion);
+        validarPinParaOperacion(numeroCuenta, pin);//valida el pin antes de realizar la operacion
+        retirar(numeroCuenta, monto, idTransaccion);//realiza el retiro, si falla lanza excepcion
     }
 
     /**
@@ -194,7 +194,7 @@ public class ATM
      */
     public double consultarSaldoConPin(String numeroCuenta, String pin)
     {
-        validarPinParaOperacion(numeroCuenta, pin);
+        validarPinParaOperacion(numeroCuenta, pin);//valida el pin antes de realizar la operacion, enviamos numero de cuenta y pin
         return consultarSaldo(numeroCuenta);
     }
 
@@ -227,20 +227,20 @@ public class ATM
      */
     public void transferirConPin(String numeroOrigen, String pinOrigen, String numeroDestino, double monto, String idTransaccionOrigen, String idTransaccionDestino)
     {
-        validarPinParaOperacion(numeroOrigen, pinOrigen);
-        transferir(numeroOrigen, numeroDestino, monto, idTransaccionOrigen, idTransaccionDestino);
+        validarPinParaOperacion(numeroOrigen, pinOrigen);//valida el pin de la cuenta de origen antes de realizar la operacion
+        transferir(numeroOrigen, numeroDestino, monto, idTransaccionOrigen, idTransaccionDestino);//realiza la transferencia, si falla lanza excepcion
     }
 
     public void eliminarTransaccion(Transaccion transaccion)
     {
-        this.listaTransacciones.remove(transaccion);
+        this.listaTransacciones.remove(transaccion);// elimina la transaccion del registro
     }
     
     public Transaccion buscarTransaccionPorId(String idTransaccion)
     {
         for (Transaccion t : listaTransacciones) 
         {
-            if (t.getIdTransaccion().equals(idTransaccion)) 
+            if (t.getIdTransaccion().equals(idTransaccion)) // si encuentra la transaccion con el id buscado
             {
                 return t;
             }
@@ -300,17 +300,17 @@ public class ATM
 
     public double consultarSaldoAutenticado() {
         if (!estaAutenticado())
-            throw new SesionNoIniciadaExcepcion();
+            throw new SesionNoIniciadaExcepcion();//verifica que haya una sesion iniciada
 
-        return consultarSaldo(getCuentaActiva().getNumeroCuenta());
+        return consultarSaldo(getCuentaActiva().getNumeroCuenta());//si hay sesion iniciada, obtiene el numero de cuenta activa y consulta su saldo
     }
 
     public void transferirAutenticado(String numeroDestino, double monto, String idTransaccionOrigen, String idTransaccionDestino) {
         if (!estaAutenticado())
-            throw new SesionNoIniciadaExcepcion();
+            throw new SesionNoIniciadaExcepcion();//verifica que haya una sesion iniciada
 
-        String numeroOrigen = getCuentaActiva().getNumeroCuenta();
-        transferir(numeroOrigen, numeroDestino, monto, idTransaccionOrigen, idTransaccionDestino);
+        String numeroOrigen = getCuentaActiva().getNumeroCuenta();//obtiene el numero de cuenta activa
+        transferir(numeroOrigen, numeroDestino, monto, idTransaccionOrigen, idTransaccionDestino);//realiza la transferencia, si falla lanza excepcion
     }
 
 }
