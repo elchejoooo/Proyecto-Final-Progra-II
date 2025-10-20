@@ -15,6 +15,7 @@ import java.util.List;
 public class Reportes {
     public static final String CONTROL_FILE = "ControlCuentas.txt";
     public static final String CONTROL_CLIENTES_FILE = "ControlClientes.txt";
+    public static final String CONTROL_TRANS_FILE = "HistorialTransacciones.txt";
 
     /** Guarda todas las cuentas en el archivo ControlCuentas.txt con formato: numero|titular|tipo|saldo */
     public static void guardarTodasCuentas(List<Cuenta> cuentas) {
@@ -76,6 +77,40 @@ public class Reportes {
         return existentes;
     }
 
+    /** Guarda una lista completa de transacciones en HistorialTransacciones.txt con formato:
+     * idTransaccion|numeroCuenta|tipo|monto|fechaHora(ISO)
+     */
+    public static void guardarTodasTransacciones(List<Modelos.Transaccion> transacciones) {
+        File f = new File(CONTROL_TRANS_FILE);
+        try (BufferedWriter w = new BufferedWriter(new FileWriter(f, false))) {
+            for (Modelos.Transaccion t : transacciones) {
+                String linea = t.getIdTransaccion() + "|" + t.getNumeroCuenta() + "|" + t.getTipoTransaccion() + "|" + String.format("%.2f", t.getMonto()) + "|" + t.getFechaHora().toString();
+                w.write(linea); w.newLine();
+            }
+        } catch (IOException e) { System.out.println("Error escribiendo HistorialTransacciones.txt: " + e.getMessage()); }
+    }
+
+    /** Agrega (append) una sola transacción al historial (útil para operaciones en vivo) */
+    public static void appendTransaccion(Modelos.Transaccion t) {
+        File f = new File(CONTROL_TRANS_FILE);
+        try (BufferedWriter w = new BufferedWriter(new FileWriter(f, true))) {
+            String linea = t.getIdTransaccion() + "|" + t.getNumeroCuenta() + "|" + t.getTipoTransaccion() + "|" + String.format("%.2f", t.getMonto()) + "|" + t.getFechaHora().toString();
+            w.write(linea); w.newLine();
+        } catch (IOException e) { System.out.println("Error anexando a HistorialTransacciones.txt: " + e.getMessage()); }
+    }
+
+    /** Lee todas las transacciones del archivo y devuelve la lista de líneas (no instancia objetos aquí) */
+    public static java.util.List<String> leerTodasLineasTransacciones() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        File f = new File(CONTROL_TRANS_FILE);
+        if (!f.exists()) return out;
+        try (BufferedReader r = new BufferedReader(new FileReader(f))) {
+            String linea;
+            while ((linea = r.readLine()) != null) out.add(linea);
+        } catch (IOException e) { System.out.println("Error leyendo HistorialTransacciones.txt: " + e.getMessage()); }
+        return out;
+    }
+
     /** Lee ControlCuentas.txt y muestra cuentas con saldo menor al umbral */
     public static void imprimirCuentasConSaldoMenor(double umbral) {
         File f = new File(CONTROL_FILE);//verifica que el archivo exista
@@ -131,7 +166,7 @@ public class Reportes {
 
     /** Menu simple para reportes (actualmente solo consulta saldos bajos) */
     public void menuReportes() {
-        System.out.println("\nMenu de Reportes:\n1) Consulta Cuentas con Saldos Bajos\n2) Volver");
+        System.out.println("\nMenu de Reportes:\n1) Consulta Cuentas con Saldos Bajos\n2) Movimientos de cuenta especifica\n3) Volver");
         String opt = Utilitaria.ScannerUtil.capturarTexto("Elija una opción de reportes:");
         if (opt == null) return;
         opt = opt.trim();
@@ -139,10 +174,52 @@ public class Reportes {
             case "1":
                 imprimirCuentasConSaldoMenor(200.00);
                 break;
+            case "2":
+                mostrarMovimientosCuenta();
+                break;
             default:
                 // volver
                 break;
         }
+    }
+
+    /** Muestra movimientos de una cuenta específica pidiendo número y PIN */
+    public void mostrarMovimientosCuenta() {
+        String numero = Utilitaria.ScannerUtil.capturarTexto("Ingrese número de cuenta:");
+        if (numero == null) return;
+        numero = numero.trim();
+
+        // buscar en control de cuentas para obtener PIN e idCliente
+        java.util.Map<String,String> cuentas = leerTodasLineasCuentas();
+        String linea = cuentas.get(numero);
+        if (linea == null) {
+            System.out.println("Cuenta no encontrada en ControlCuentas.txt: " + numero);
+            return;
+        }
+        String[] parts = linea.split("\\|");
+        String pin = "";
+        if (parts.length >= 6) pin = parts[4];
+
+        String pinIn = Utilitaria.ScannerUtil.capturarTexto("Ingrese PIN para la cuenta " + numero + ":");
+        if (pinIn == null) return;
+        if (!pinIn.equals(pin)) { System.out.println("PIN inválido."); return; }
+
+        // leer transacciones y filtrar por cuenta
+        java.util.List<String> txLines = leerTodasLineasTransacciones();
+        boolean any = false;
+        for (String tx : txLines) {
+            String[] p = tx.split("\\|");
+            if (p.length < 5) continue;
+            String idTx = p[0];
+            String num = p[1];
+            if (!num.equals(numero)) continue;
+            any = true;
+            String tipo = p[2];
+            String monto = p[3];
+            String fecha = p[4];
+            System.out.println("ID: " + idTx + " | Tipo: " + tipo + " | Monto: " + monto + " | Fecha: " + fecha);
+        }
+        if (!any) System.out.println("No hay movimientos registrados para la cuenta " + numero);
     }
 }
 

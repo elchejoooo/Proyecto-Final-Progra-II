@@ -140,8 +140,9 @@ public class ATM
         Transaccion t = new Transaccion(Enums.TipoTransaccion.DEPOSITO, monto, numeroCuenta, idTransaccion);//aqui se crea la transaccion al enviar los datos del tipo de transaccion, monto, numero de cuenta y id unico
         c.aplicarDeposito(monto, t);
         agregarTransaccion(t);
-    // actualizar archivo de control de cuentas
+    // actualizar archivo de control de cuentas y anexar transaccion
     try { Reportes.guardarTodasCuentas(new ArrayList<>(this.cuentas.values())); } catch (Exception ex) { }
+    try { Reportes.appendTransaccion(t); } catch (Exception ex) { }
     }
 
     /**
@@ -165,8 +166,9 @@ public class ATM
         Transaccion t = new Transaccion(Enums.TipoTransaccion.RETIRO, monto, numeroCuenta, idTransaccion);//se envian daytos de la trnasaccion, se crea la transaccion
         c.aplicarRetiro(monto, t);
         agregarTransaccion(t);
-    // actualizar archivo de control de cuentas
+    // actualizar archivo de control de cuentas y anexar transaccion
     try { Reportes.guardarTodasCuentas(new ArrayList<>(this.cuentas.values())); } catch (Exception ex) { }
+    try { Reportes.appendTransaccion(t); } catch (Exception ex) { }
     }
 
     /**
@@ -218,8 +220,10 @@ public class ATM
         Transaccion tDep = new Transaccion(Enums.TipoTransaccion.DEPOSITO, monto, numeroDestino, idTransaccionDestino);
         destino.aplicarDeposito(monto, tDep);//aplica deposito a la de destino
         this.agregarTransaccion(tDep);
-    // actualizar archivo de control de cuentas
+    // actualizar archivo de control de cuentas y anexar transacciones
     try { Reportes.guardarTodasCuentas(new ArrayList<>(this.cuentas.values())); } catch (Exception ex) { }
+    try { Reportes.appendTransaccion(tRetiro); } catch (Exception ex) { }
+    try { Reportes.appendTransaccion(tDep); } catch (Exception ex) { }
     }
 
     /**

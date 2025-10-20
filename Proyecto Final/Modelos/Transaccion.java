@@ -27,6 +27,16 @@ public class Transaccion
         this.idTransaccion = idTransaccion;
     }
 
+    /** Constructor usado para reconstruir transacciones desde almacenamiento con fecha/hora conocida */
+    public Transaccion(TipoTransaccion tipoTransaccion, double monto, String numeroCuenta, String idTransaccion, LocalDateTime fechaHora) {
+        validarCampos(tipoTransaccion, monto, numeroCuenta, idTransaccion);
+        this.tipoTransaccion = tipoTransaccion;
+        this.monto = monto;
+        this.numeroCuenta = numeroCuenta;
+        this.fechaHora = fechaHora == null ? LocalDateTime.now() : fechaHora;
+        this.idTransaccion = idTransaccion;
+    }
+
     // Métodos
     public String mostrarDetallesTransaccion()
     {

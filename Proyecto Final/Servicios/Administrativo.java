@@ -107,6 +107,29 @@ public class Administrativo
 			}
 		}
 		this.nextCuentaId = Math.max(this.nextCuentaId, maxCuentaId + 1);
+
+		// Cargar transacciones y asociarlas a cuentas/ATM
+		java.util.List<String> txLines = Reportes.leerTodasLineasTransacciones();
+		for (String line : txLines) {
+			try {
+				// formato: idTransaccion|numeroCuenta|tipo|monto|fechaHora
+				String[] p = line.split("\\|");
+				if (p.length < 5) continue;
+				String idTx = p[0];
+				String numCuenta = p[1];
+				Enums.TipoTransaccion tipo = Enums.TipoTransaccion.valueOf(p[2]);
+				double monto = Double.parseDouble(p[3].replace(',', '.'));
+				java.time.LocalDateTime fecha = java.time.LocalDateTime.parse(p[4]);
+				Modelos.Transaccion t = new Modelos.Transaccion(tipo, monto, numCuenta, idTx, fecha);
+				// agregar al ATM y a la cuenta si existe
+				if (this.atm != null) this.atm.agregarTransaccion(t);
+				Cuenta cu = null;
+				for (Cuenta cc : this.cuentas) if (cc.getNumeroCuenta().equals(numCuenta)) { cu = cc; break; }
+				if (cu != null) {
+					try { cu.agregarTransaccion(t); } catch (Exception ex) { }
+				}
+			} catch (Exception ex) { /* ignorar lineas mal formadas */ }
+		}
 	}
 
 	public List<Cliente> getClientes() { return clientes; }//aqui se obtiene la lista de clientes
