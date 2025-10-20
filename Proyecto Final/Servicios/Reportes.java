@@ -166,7 +166,7 @@ public class Reportes {
 
     /** Menu simple para reportes (actualmente solo consulta saldos bajos) */
     public void menuReportes() {
-        System.out.println("\nMenu de Reportes:\n1) Consulta Cuentas con Saldos Bajos\n2) Movimientos de cuenta especifica\n3) Volver");
+        System.out.println("\nMenu de Reportes:\n1) Consulta Cuentas con Saldos Bajos\n2) Movimientos de cuenta especifica\n3) Historial Movimientos del Dia\n4) Volver");
         String opt = Utilitaria.ScannerUtil.capturarTexto("Elija una opción de reportes:");
         if (opt == null) return;
         opt = opt.trim();
@@ -176,6 +176,9 @@ public class Reportes {
                 break;
             case "2":
                 mostrarMovimientosCuenta();
+                break;
+            case "3":
+                mostrarMovimientosDelDia();
                 break;
             default:
                 // volver
@@ -220,6 +223,29 @@ public class Reportes {
             System.out.println("ID: " + idTx + " | Tipo: " + tipo + " | Monto: " + monto + " | Fecha: " + fecha);
         }
         if (!any) System.out.println("No hay movimientos registrados para la cuenta " + numero);
+    }
+
+    /** Muestra todas las transacciones realizadas hoy (fecha local) */
+    public void mostrarMovimientosDelDia() {
+        java.util.List<String> txLines = leerTodasLineasTransacciones();
+        java.time.LocalDate hoy = java.time.LocalDate.now();
+        boolean any = false;
+        for (String line : txLines) {
+            try {
+                String[] p = line.split("\\|");
+                if (p.length < 5) continue;
+                String idTx = p[0];
+                String num = p[1];
+                String tipo = p[2];
+                String monto = p[3];
+                java.time.LocalDateTime fecha = java.time.LocalDateTime.parse(p[4]);
+                if (fecha.toLocalDate().equals(hoy)) {
+                    any = true;
+                    System.out.println("ID: " + idTx + " | Cuenta: " + num + " | Tipo: " + tipo + " | Monto: " + monto + " | Fecha: " + fecha.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")));
+                }
+            } catch (Exception ex) { /* ignorar lineas mal formadas */ }
+        }
+        if (!any) System.out.println("No se encontraron movimientos para hoy.");
     }
 }
 

@@ -1,49 +1,15 @@
 package Principal;
 
-import java.time.LocalDate;
-
 //import Enums.TipoCuenta;
 import Modelos.Cliente;
-import Modelos.Cuenta;
 
 public class Principal 
 {
    public static void main(String[] args) 
    {
-   // registro rapido de un cliente, una cuenta y un par de transacciones
-   Cliente cliente = new Cliente("12345678", "Juan Pérez", "555-1234", LocalDate.of(1990, 5, 15));
-   System.out.println(cliente.mostrarDetallesCliente());
-
-   // creamos una cuenta para el cliente ya creado 
-   Enums.TipoCuenta tipoCuenta = Enums.TipoCuenta.AHORRO;
-   Cuenta cuenta = new Cuenta("000123456789", "1234", tipoCuenta, cliente);
-   cliente.agregarCuenta(cuenta);
-   System.out.println(cuenta.mostrarDetallesCuenta());
-
-   // invocamos a la clase ATM para poder trabajar con las transacciones
+   // iniciar servicios
    Servicios.ATM atm = new Servicios.ATM();
-      Servicios.Administrativo admin = new Servicios.Administrativo(atm, true);
-   Enums.TipoTransaccion deposito = Enums.TipoTransaccion.DEPOSITO;
-   Enums.TipoTransaccion retiro = Enums.TipoTransaccion.RETIRO;
-
-   // colocamos unas transacciones manuales para probar el metodo mostrarInformacionCuentas
-   Modelos.Transaccion t1 = new Modelos.Transaccion(deposito, 1500.00, cuenta.getNumeroCuenta(), "TXN001");
-   Modelos.Transaccion t2 = new Modelos.Transaccion(retiro, 200.00, cuenta.getNumeroCuenta(), "TXN002");
-   Modelos.Transaccion t3 = new Modelos.Transaccion(deposito, 500.00, "999888777666", "TXN003"); // otra cuenta ficticia
-
-   //se agregan las transacciones al atm al numero de cuenta creado
-   atm.agregarTransaccion(t1);
-   atm.agregarTransaccion(t2);
-   atm.agregarTransaccion(t3);
-
-   System.out.println("\nMostrando información agrupada por cuentas desde el ATM:");
-   atm.mostrarInformacionCuentas();
-
-   // Registramos la cuenta creada y otra adicional para pruebas de transferencia
-   atm.registrarCuenta(cuenta);
-   Cuenta cuenta2 = new Cuenta("000987654321", "4321", tipoCuenta, cliente);
-   cliente.agregarCuenta(cuenta2);
-   atm.registrarCuenta(cuenta2);
+   Servicios.Administrativo admin = new Servicios.Administrativo(atm, true);
 
    mainLoop://mainloop es una etiqueta para poder salir de multiples while anidados
    //una etiqueta es un nombre que se le da a un bloque de codigo, en este caso a un while
