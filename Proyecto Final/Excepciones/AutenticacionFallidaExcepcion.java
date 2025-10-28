@@ -6,6 +6,7 @@ package Excepciones;
      */
 public class AutenticacionFallidaExcepcion extends RuntimeException 
 {
+    private static final long serialVersionUID = 1L;
     
     public AutenticacionFallidaExcepcion(String cuenta) 
     {

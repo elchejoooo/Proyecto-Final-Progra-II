@@ -7,7 +7,7 @@ import Modelos.Transaccion;
 import Modelos.Cuenta;
 import Excepciones.CuentaNoEncontradaExcepcion;
 import Excepciones.PinInvalidoExcepcion;
-import Excepciones.SesionNoIniciadaExcepcion;
+// SesionNoIniciadaExcepcion removed import (no longer used after cleanup)
 
 public class ATM 
 {
@@ -34,35 +34,7 @@ public class ATM
         this.cuentas.put(cuenta.getNumeroCuenta(), cuenta);
     }
 
-    /**
-     * Inicia sesión para la cuenta indicada si el PIN coincide. Lanza excepciones si falla.
-     */
-    public void iniciarSesion(String numeroCuenta, String pin)
-    {
-        Cuenta c = this.cuentas.get(numeroCuenta);
-        if (c == null)
-            throw new CuentaNoEncontradaExcepcion(numeroCuenta);
-
-        int intentos = this.intentosFallidos.getOrDefault(numeroCuenta, 0);//se obtienen los intentos fallidos actuales de esta cuenta
-        if (intentos >= MAX_INTENTOS) {
-            throw new PinInvalidoExcepcion("La cuenta " + numeroCuenta + " está bloqueada por múltiples intentos fallidos.");// si se falla 3 veces seguidas, la cuentase bloquea
-        }
-
-        if (!c.getPin().equals(pin)) {// si el pin es incorrecto entonces se aumenta el contador de fallos
-            intentos++;
-            this.intentosFallidos.put(numeroCuenta, intentos);
-            int restantes = MAX_INTENTOS - intentos;
-            if (restantes <= 0) {
-                throw new PinInvalidoExcepcion("PIN inválido. La cuenta ha sido bloqueada tras " + MAX_INTENTOS + " intentos fallidos.");
-            } else {
-                throw new PinInvalidoExcepcion("PIN inválido. Intentos restantes: " + restantes);
-            }
-        }
-
-        // al tener exito la autentificacion se resetea el contador de intentos y se inicia la sesion
-        this.intentosFallidos.remove(numeroCuenta);
-        this.cuentaActiva = c;//nos indica que la cuenta esta en sesion activa
-    }
+    // iniciarSesion removed: session-based flows are unused in the current CLI
 
     /**
      * Desbloquea los intentos fallidos para una cuenta (ej: administrador)
@@ -116,12 +88,7 @@ public class ATM
         return this.cuentaActiva != null;
     }
 
-    public Cuenta getCuentaActiva()
-    {
-        if (!estaAutenticado())
-            throw new SesionNoIniciadaExcepcion();
-        return this.cuentaActiva;
-    }
+    // getCuentaActiva removed: not used by external code
 
     public void agregarTransaccion(Transaccion transaccion)
     {
@@ -285,36 +252,6 @@ public class ATM
     }
 
     
-    // Operaciones convenientes que usan la cuenta autenticada
-    public void retiroAutenticado(double monto, String idTransaccion) {
-        if (!estaAutenticado())
-            throw new SesionNoIniciadaExcepcion();
-
-        String numero = getCuentaActiva().getNumeroCuenta();
-        retirar(numero, monto, idTransaccion);
-    }
-
-    public void depositoAutenticado(double monto, String idTransaccion) {
-        if (!estaAutenticado())
-            throw new SesionNoIniciadaExcepcion();
-
-        String numero = getCuentaActiva().getNumeroCuenta();
-        depositar(numero, monto, idTransaccion);
-    }
-
-    public double consultarSaldoAutenticado() {
-        if (!estaAutenticado())
-            throw new SesionNoIniciadaExcepcion();//verifica que haya una sesion iniciada
-
-        return consultarSaldo(getCuentaActiva().getNumeroCuenta());//si hay sesion iniciada, obtiene el numero de cuenta activa y consulta su saldo
-    }
-
-    public void transferirAutenticado(String numeroDestino, double monto, String idTransaccionOrigen, String idTransaccionDestino) {
-        if (!estaAutenticado())
-            throw new SesionNoIniciadaExcepcion();//verifica que haya una sesion iniciada
-
-        String numeroOrigen = getCuentaActiva().getNumeroCuenta();//obtiene el numero de cuenta activa
-        transferir(numeroOrigen, numeroDestino, monto, idTransaccionOrigen, idTransaccionDestino);//realiza la transferencia, si falla lanza excepcion
-    }
+    // removed authenticated convenience methods (unused)
 
 }

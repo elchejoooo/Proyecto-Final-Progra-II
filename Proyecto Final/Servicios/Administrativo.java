@@ -132,15 +132,20 @@ public class Administrativo
 		}
 	}
 
-	public List<Cliente> getClientes() { return clientes; }//aqui se obtiene la lista de clientes
-	public List<Cuenta> getCuentas() { return cuentas; }// aqui se obtiene la lista de cuentas
+	
 
 	/** Crea y registra un cliente en memoria */
 	public Cliente crearCliente(String idCliente, String nombreCompleto, String telefono, java.time.LocalDate fechaNacimiento)
 	{
+		// Validar que no exista otro cliente con mismo telefono y fechaNacimiento
+		for (Cliente existente : this.clientes) {
+			if (existente.getTelefono().equals(telefono) && existente.getFechaNacimiento().equals(fechaNacimiento)) {
+				throw new RuntimeException("Ya existe un cliente con ese teléfono y fecha de nacimiento.");
+			}
+		}
 		Cliente c = new Cliente(idCliente, nombreCompleto, telefono, fechaNacimiento);//aqui se crea el cliente, se envia a el constructor de Cliente
 		clientes.add(c);
-	try { Reportes.guardarTodosClientes(this.clientes); } catch (Exception ex) { }// no bloquear si falla el guardado, mas bien se intenta nuevamente en el futuro cuando se cree otro cliente
+		try { Reportes.guardarTodosClientes(this.clientes); } catch (Exception ex) { }// no bloquear si falla el guardado, mas bien se intenta nuevamente en el futuro cuando se cree otro cliente
 		return c;
 	}
 
@@ -155,6 +160,12 @@ public class Administrativo
 	/** Crea un cliente generando automáticamente su ID. */
 	public Cliente crearClienteAuto(String nombreCompleto, String telefono, java.time.LocalDate fechaNacimiento)
 	{
+		// antes de generar id, validar duplicados por telefono+fecha
+		for (Cliente existente : this.clientes) {
+			if (existente.getTelefono().equals(telefono) && existente.getFechaNacimiento().equals(fechaNacimiento)) {
+				throw new RuntimeException("Ya existe un cliente con ese teléfono y fecha de nacimiento.");
+			}
+		}
 		String id = generarIdCliente();
 		return crearCliente(id, nombreCompleto, telefono, fechaNacimiento);//aqui se crea el cliente con el id generado automaticamente
 	}
