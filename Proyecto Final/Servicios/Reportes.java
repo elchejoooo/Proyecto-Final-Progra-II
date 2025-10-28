@@ -130,7 +130,6 @@ public class Reportes {
                 String titular = parts[1];
                 String idCliente = "";
                 String tipo = "";
-                String pin = "";
                 String saldoStr = "0";
                 if (parts.length == 4) {
                     // antiguo: numero|titular|tipo|saldo
@@ -145,7 +144,7 @@ public class Reportes {
                     // nuevo: numero|titular|idCliente|tipo|pin|saldo
                     idCliente = parts[2];
                     tipo = parts[3];
-                    pin = parts[4];
+                    // parts[4] es pin, no se usa ya que no es necesario para este reporte
                     saldoStr = parts[5];
                 }
                 // normalizar coma decimal a punto
@@ -199,11 +198,10 @@ public class Reportes {
             System.out.println("Cuenta no encontrada en ControlCuentas.txt: " + numero);
             return;
         }
-        String[] parts = linea.split("\\|");
-        String pin = "";
-        if (parts.length >= 6) pin = parts[4];
+    String[] parts = linea.split("\\|");
+    String pin = (parts.length >= 6) ? parts[4] : "";
 
-        String pinIn = Utilitaria.ScannerUtil.capturarTexto("Ingrese PIN para la cuenta " + numero + ":");
+    String pinIn = Utilitaria.ScannerUtil.capturarTexto("Ingrese PIN para la cuenta " + numero + ":");
         if (pinIn == null) return;
         if (!pinIn.equals(pin)) { System.out.println("PIN inválido."); return; }
 

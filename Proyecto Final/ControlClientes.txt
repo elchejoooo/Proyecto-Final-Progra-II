@@ -5,3 +5,4 @@
 5|Rodrigo Maldonado|56789087|2000-02-13
 6|Rodrigo Maldonado|45212567|2000-09-10
 7|Rodrigo Maldonado |56789087|2000-02-13
+8|Zelina Vega|19039468|1989-09-21

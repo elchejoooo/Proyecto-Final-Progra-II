@@ -28,80 +28,69 @@ public class Administrativo
 	/** Constructor alterno: carga clientes y cuentas desde archivos de control si existen */
 	public Administrativo(ATM atm, boolean cargarDesdeArchivos) {
 		this(atm);
-		if (!cargarDesdeArchivos) return;
+		// loading has been moved to cargarDesdeArchivos() to avoid 'this' escape in constructor
+	}
 
+	/** Load persisted clients, accounts and transactions from control files. */
+	public void cargarDesdeArchivos() {
 		// Cargar clientes
 		java.util.Map<String, String> clientesLines = Reportes.leerTodasLineasClientes();
 		long maxId = 0L;
 		for (String line : clientesLines.values()) {
 			try {
-				String[] parts = line.split("\\|");//split nos indica que separe la linea en partes donde haya un |
+				String[] parts = line.split("\\|");
 				// esperamos: idCliente|nombreCompleto|telefono|fechaNacimiento
-				if (parts.length < 4) continue;//si la linea no tiene al menos 4 partes, se ignora
+				if (parts.length < 4) continue;
 				String id = parts[0];
 				String nombre = parts[1];
 				String telefono = parts[2];
-				java.time.LocalDate fecha = java.time.LocalDate.parse(parts[3]);//puede lanzar excepcion si el formato es invalido
-				// crear cliente y agregar a la lista
-				Cliente c = new Cliente(id, nombre, telefono, fecha);//aqui se crea el cliente con los datos obtenidos del archivo
-				this.clientes.add(c);//aqui se agrega el cliente a la lista de clientes del administrativo
-				try { long v = Long.parseLong(id); if (v > maxId) maxId = v; } catch (NumberFormatException ex) { }//aqui se obtiene el maximo id de cliente para luego asignar el siguiente, si el id no es numerico se ignora
-				//Long.parseLong puede lanzar NumberFormatException si el id no es un numero valido
-				// actualizar nextClienteId despues de procesar todos los clientes
+				java.time.LocalDate fecha = java.time.LocalDate.parse(parts[3]);
+				Cliente c = new Cliente(id, nombre, telefono, fecha);
+				this.clientes.add(c);
+				try { long v = Long.parseLong(id); if (v > maxId) maxId = v; } catch (NumberFormatException ex) { }
 			} catch (Exception ex) {
 				// ignorar linea mal formada
 			}
 		}
-		this.nextClienteId = Math.max(this.nextClienteId, maxId + 1);//asegurar que el siguiente id es mayor al maximo encontrado
+		this.nextClienteId = Math.max(this.nextClienteId, maxId + 1);
 
 		// Cargar cuentas
-		java.util.Map<String, String> cuentasLines = Reportes.leerTodasLineasCuentas();//lee todas las lineas del archivo ControlCuentas.txt y las devuelve en un mapa
-		long maxCuentaId = 0L;//0L ya que es un long porque los numeros de cuenta son largos
+		java.util.Map<String, String> cuentasLines = Reportes.leerTodasLineasCuentas();
+		long maxCuentaId = 0L;
 		for (String line : cuentasLines.values()) {
 			try {
 				String[] parts = line.split("\\|");
-				// esperamos: numero|nombreTitular|idCliente|tipo|saldo  (pin no almacenado en este formato)
 				if (parts.length < 5) continue;
 				String numero = parts[0];
 				String nombreTitular = parts[1];
 				String idCliente = parts[2];
 				Enums.TipoCuenta tipo = Enums.TipoCuenta.valueOf(parts[3]);
-				String pin = "0000";// PIN por defecto si no se encuentra en el archivo
-				String saldoStr = "0";// saldo por defecto
+				String pin = "0000";
+				String saldoStr = "0";
 				if (parts.length == 5) {
-					// old format without pin: numero|titular|idCliente|tipo|saldo
-					saldoStr = parts[4].replace(',', '.');//reemplaza comas por puntos en caso de que el formato use comas
+					saldoStr = parts[4].replace(',', '.');
 				} else if (parts.length >= 6) {
-					// new format: numero|titular|idCliente|tipo|pin|saldo
 					pin = parts[4];
 					saldoStr = parts[5].replace(',', '.');
 				}
 				double saldo = 0.0;
-				try { saldo = Double.parseDouble(saldoStr); } catch (NumberFormatException e) { }//si el saldo no es un numero valido, queda en 0.0
-				// buscar cliente por id
+				try { saldo = Double.parseDouble(saldoStr); } catch (NumberFormatException e) { }
 				Cliente titular = buscarClientePorId(idCliente);
 				if (titular == null) {
-					// crear cliente placeholder si no existe
-					titular = new Cliente(idCliente, nombreTitular, "", java.time.LocalDate.of(1970,1,1));//fecha por defecto
-					this.clientes.add(titular);//agregar el cliente placeholder a la lista de clientes
+					titular = new Cliente(idCliente, nombreTitular, "", java.time.LocalDate.of(1970,1,1));
+					this.clientes.add(titular);
 				}
-				// para reconstruir la cuenta necesitamos un PIN; usar 0000 por defecto si no hay otro medio
-				// crear y registrar la cuenta usando el PIN leído o el PIN por defecto
 				Cuenta c = crearCuenta(numero, pin, tipo, titular);
-				// ajustar saldo: si hay ATM disponible, usar su ruta (crea transaccion y registra correctamente)
 				if (saldo > 0.0) {
-					String idTx = "IMPORT_" + System.currentTimeMillis();//id unico basado en timestamp
-					// si hay ATM, usar su metodo para depositar (crea transaccion y registra correctamente)
-					if (this.atm != null) {//si el atm no es nulo
-						try { this.atm.depositar(numero, saldo, idTx); } catch (Exception ex) { /* no bloquear */ }
+					String idTx = "IMPORT_" + System.currentTimeMillis();
+					if (this.atm != null) {
+						try { this.atm.depositar(numero, saldo, idTx); } catch (Exception ex) { }
 					} else {
-						// sin ATM, aplicar deposito directo con transaccion local
 						Modelos.Transaccion t = new Modelos.Transaccion(Enums.TipoTransaccion.DEPOSITO, saldo, numero, idTx);
-						try { c.aplicarDeposito(saldo, t); } catch (Exception ex) { }// no bloquear, si falla queda sin saldo
+						try { c.aplicarDeposito(saldo, t); } catch (Exception ex) { }
 					}
 				}
-				try { long v = Long.parseLong(numero); if (v > maxCuentaId) maxCuentaId = v; } catch (NumberFormatException ex) { }//si el numero de cuenta no es un numero valido, se ignora
-				// actualizar nextCuentaId despues de procesar todas las cuentas
+				try { long v = Long.parseLong(numero); if (v > maxCuentaId) maxCuentaId = v; } catch (NumberFormatException ex) { }
 			} catch (Exception ex) {
 				// ignorar linea mal formada
 			}
@@ -112,7 +101,6 @@ public class Administrativo
 		java.util.List<String> txLines = Reportes.leerTodasLineasTransacciones();
 		for (String line : txLines) {
 			try {
-				// formato: idTransaccion|numeroCuenta|tipo|monto|fechaHora
 				String[] p = line.split("\\|");
 				if (p.length < 5) continue;
 				String idTx = p[0];
@@ -121,14 +109,13 @@ public class Administrativo
 				double monto = Double.parseDouble(p[3].replace(',', '.'));
 				java.time.LocalDateTime fecha = java.time.LocalDateTime.parse(p[4]);
 				Modelos.Transaccion t = new Modelos.Transaccion(tipo, monto, numCuenta, idTx, fecha);
-				// agregar al ATM y a la cuenta si existe
 				if (this.atm != null) this.atm.agregarTransaccion(t);
 				Cuenta cu = null;
 				for (Cuenta cc : this.cuentas) if (cc.getNumeroCuenta().equals(numCuenta)) { cu = cc; break; }
 				if (cu != null) {
 					try { cu.agregarTransaccion(t); } catch (Exception ex) { }
 				}
-			} catch (Exception ex) { /* ignorar lineas mal formadas */ }
+			} catch (Exception ex) { }
 		}
 	}
 

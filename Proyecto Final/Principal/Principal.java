@@ -9,7 +9,9 @@ public class Principal
    {
    // iniciar servicios
    Servicios.ATM atm = new Servicios.ATM();
-   Servicios.Administrativo admin = new Servicios.Administrativo(atm, true);
+   Servicios.Administrativo admin = new Servicios.Administrativo(atm);
+   // cargar datos persistidos después de construir el objeto para evitar 'this' escape
+   try { admin.cargarDesdeArchivos(); } catch (Exception ex) { /* ignore load errors */ }
 
    mainLoop://mainloop es una etiqueta para poder salir de multiples while anidados
    //una etiqueta es un nombre que se le da a un bloque de codigo, en este caso a un while
