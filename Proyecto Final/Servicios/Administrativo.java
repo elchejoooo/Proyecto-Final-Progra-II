@@ -81,14 +81,10 @@ public class Administrativo
 					this.clientes.add(titular);
 				}
 				Cuenta c = crearCuenta(numero, pin, tipo, titular);
+				// establecer saldo inicial sin crear transacciones importadas; las transacciones
+				// reales se cargarán desde HistorialTransacciones.txt más abajo
 				if (saldo > 0.0) {
-					String idTx = "IMPORT_" + System.currentTimeMillis();
-					if (this.atm != null) {
-						try { this.atm.depositar(numero, saldo, idTx); } catch (Exception ex) { }
-					} else {
-						Modelos.Transaccion t = new Modelos.Transaccion(Enums.TipoTransaccion.DEPOSITO, saldo, numero, idTx);
-						try { c.aplicarDeposito(saldo, t); } catch (Exception ex) { }
-					}
+					try { c.cargarSaldoInicial(saldo); } catch (Exception ex) { /* ignore invalid saldo */ }
 				}
 				try { long v = Long.parseLong(numero); if (v > maxCuentaId) maxCuentaId = v; } catch (NumberFormatException ex) { }
 			} catch (Exception ex) {

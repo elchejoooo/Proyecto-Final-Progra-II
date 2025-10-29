@@ -169,4 +169,13 @@ public class Cuenta
     public LocalDate getFechaCreacion() {
         return fechaCreacion;
     }
+
+    /**
+     * Establece el saldo inicial al cargar desde almacenamiento sin crear transacciones.
+     * Útil exclusivamente durante la reconstrucción al arrancar la aplicación.
+     */
+    public void cargarSaldoInicial(double nuevoSaldo) {
+        if (nuevoSaldo < 0) throw new Excepciones.MontoInvalidoExcepcion("Saldo inicial inválido.");
+        this.saldo = nuevoSaldo;
+    }
 }
