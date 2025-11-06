@@ -34,32 +34,39 @@ public class Principal
                opcion = opcion.trim();//con trim nos aseguramos que no haya espacios al inicio o al final
 
                switch (opcion) {
-                  case "1": // consultar saldo
-                     try {
-                        String numero = capturarSinEspacios("Ingrese número de cuenta (o 'volver'):", "volver");
-                        if (numero == null) break mainLoop;//rompe el mainLoop si es null
-                        numero = numero.trim();
-                        if (numero.equalsIgnoreCase("volver")) break innerLoop;// se rompe el innerLoop si el usuario ingresa "volver"
-                        String pin = capturarSinEspacios("Ingrese PIN para la cuenta " + numero + ":");
-                        double saldo = atm.consultarSaldoConPin(numero, pin);//aqui consultamos el saldo usando el metodo del ATM enviando numero y pin
-                        //el metodo consultarSaldoConPin lanza excepciones si hay error, por eso se usa try-catch
-                        //si no hay error, se imprime el saldo
-                        System.out.println("Saldo: " + String.format("%.2f", saldo));
-                     } catch (RuntimeException e) {
-                        System.out.println("Error: " + e.getMessage());
-                     }
+                     case "1": // consultar saldo
+                        try {
+                           String numero = Utilitaria.ValidacionEntrada.solicitarCuentaValida(atm, "Ingrese número de cuenta (o 'salir' para cancelar):");
+                           if (numero == null) break innerLoop;
+                           // Pedir PIN sin límite de intentos; si ingresa 'salir' se cancela
+                           while (true) {
+                              String pin = capturarSinEspacios("Ingrese PIN para la cuenta " + numero + " (o 'salir' para cancelar):");
+                              if (pin == null) { System.out.println("Operación cancelada."); break; }
+                              // verificar sin incrementar contadores ni bloquear
+                              if (atm.verificarPinSinBloqueo(numero, pin)) {
+                                 double saldo = atm.consultarSaldo(numero);
+                                 System.out.println("Saldo: " + String.format("%.2f", saldo));
+                                 break;
+                              } else {
+                                 System.out.println("PIN incorrecto. Regresando al menú de operaciones.");
+                                 break; // regresar al menu de operaciones sin bloqueo
+                              }
+                           }
+                        } catch (RuntimeException e) {
+                           System.out.println("Error: " + e.getMessage());
+                        }
                      break;
                   case "2": // depositar
                      try {
-                        String numero = capturarSinEspacios("Ingrese número de cuenta para depositar (o 'volver'):", "volver");
-                        if (numero == null) break mainLoop;
-                        numero = numero.trim();
-                        if (numero.equalsIgnoreCase("volver")) break innerLoop;
-                        String montoStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese monto a depositar:");
-                        double monto = Double.parseDouble(montoStr);
+                        String numero = Utilitaria.ValidacionEntrada.solicitarCuentaValida(atm, "Ingrese número de cuenta para depositar (o 'salir' para cancelar):");
+                        if (numero == null) { System.out.println("Operación cancelada."); break; }
+                        Double montoObj = Utilitaria.ScannerUtil.capturarDoubleCancelable("Ingrese monto a depositar:");
+                        if (montoObj == null) { System.out.println("Operación cancelada."); break; }
+                        double monto = montoObj;
                         String pin = capturarSinEspacios("Ingrese PIN para autorizar el depósito:");
-                        String idTx = "DEP_" + System.currentTimeMillis();//genera un ID unico basado en el tiempo actual 
-                        atm.depositarConPin(numero, pin, monto, idTx);//aqui se llama al metodo depositarConPin del ATM
+                        if (pin == null) { System.out.println("Operación cancelada."); break; }
+                        String idTx = "DEP_" + System.currentTimeMillis();
+                        atm.depositarConPin(numero, pin, monto, idTx);
                         //el metodo depositarConPin lanza excepciones si hay error, por eso se usa try-catch
                         //si no hay error, se imprime el mensaje de exito
                         System.out.println("Depósito realizado. ID: " + idTx);//aqui se imprime el mensaje de exito, idTX es el id de la transaccion
@@ -71,15 +78,15 @@ public class Principal
                      break;
                   case "3": // retirar
                      try {
-                        String numero = capturarSinEspacios("Ingrese número de cuenta para retirar (o 'volver'):", "volver");
-                        if (numero == null) break mainLoop;
-                        numero = numero.trim();
-                        if (numero.equalsIgnoreCase("volver")) break innerLoop;// si el usuario ingresa "volver", se sale del menu de operaciones y regresa al menu principal
-                        String montoStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese monto a retirar:");
-                        double monto = Double.parseDouble(montoStr);//convierte el string a double
+                        String numero = Utilitaria.ValidacionEntrada.solicitarCuentaValida(atm, "Ingrese número de cuenta para retirar (o 'salir' para cancelar):");
+                        if (numero == null) { System.out.println("Operación cancelada."); break; }
+                        Double montoObj = Utilitaria.ScannerUtil.capturarDoubleCancelable("Ingrese monto a retirar:");
+                        if (montoObj == null) { System.out.println("Operación cancelada."); break; }
+                        double monto = montoObj;
                         String pin = capturarSinEspacios("Ingrese PIN para autorizar el retiro:");
-                        String idTx = "RET_" + System.currentTimeMillis();//genera un ID unico basado en el tiempo actual
-                        atm.retirarConPin(numero, pin, monto, idTx);//aqui se llama al metodo retirarConPin del ATM
+                        if (pin == null) { System.out.println("Operación cancelada."); break; }
+                        String idTx = "RET_" + System.currentTimeMillis();
+                        atm.retirarConPin(numero, pin, monto, idTx);
                         //el metodo retirarConPin lanza excepciones si hay error, por eso se usa try-catch
                         //si no hay error, se imprime el mensaje de exito
                         System.out.println("Retiro realizado. ID: " + idTx);//aqui se imprime el mensaje de exito, idTX es el id de la transaccion
@@ -91,19 +98,18 @@ public class Principal
                      break;
                   case "4": // transferir
                      try {
-                        String origen = capturarSinEspacios("Ingrese número de cuenta origen (o 'volver'):", "volver");
-                        if (origen == null) break mainLoop;//si es null, se sale del programa
-                        origen = origen.trim();
-                        if (origen.equalsIgnoreCase("volver")) break innerLoop;// si el usuario ingresa "volver", se sale del menu de operaciones y regresa al menu principal
-                        String destino = capturarSinEspacios("Ingrese número de cuenta destino:", "volver");
-                        if (destino == null) break mainLoop;//si es null, se sale del programa
-                        destino = destino.trim();
-                        String montoStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese monto a transferir:");
-                        double monto = Double.parseDouble(montoStr);
+                        String origen = Utilitaria.ValidacionEntrada.solicitarCuentaValida(atm, "Ingrese número de cuenta origen (o 'salir' para cancelar):");
+                        if (origen == null) { System.out.println("Operación cancelada."); break; }
+                        String destino = Utilitaria.ValidacionEntrada.solicitarCuentaValida(atm, "Ingrese número de cuenta destino (o 'salir' para cancelar):");
+                        if (destino == null) { System.out.println("Operación cancelada."); break; }
+                        Double montoObj = Utilitaria.ScannerUtil.capturarDoubleCancelable("Ingrese monto a transferir:");
+                        if (montoObj == null) { System.out.println("Operación cancelada."); break; }
+                        double monto = montoObj;
                         String pin = capturarSinEspacios("Ingrese PIN para autorizar la transferencia:");
-                        String idOrig = "TR_ORIG_" + System.currentTimeMillis();//genera un ID unico para la cuenta origen, tomado como retiro
-                        String idDest = "TR_DST_" + System.currentTimeMillis();//genera un ID unico para la cuenta destino, tomado como deposito
-                        atm.transferirConPin(origen, pin, destino, monto, idOrig, idDest);//aqui se llama al metodo transferirConPin del ATM se envia origen, pin, destino, monto, idOrig, idDest
+                        if (pin == null) { System.out.println("Operación cancelada."); break; }
+                        String idOrig = "TR_ORIG_" + System.currentTimeMillis();
+                        String idDest = "TR_DST_" + System.currentTimeMillis();
+                        atm.transferirConPin(origen, pin, destino, monto, idOrig, idDest);
                         //el metodo transferirConPin lanza excepciones si hay error, por eso se usa try-catch
                         //si no hay error, se imprime el mensaje de exito
                         System.out.println("Transferencia realizada. IDs: " + idOrig + ", " + idDest);
@@ -132,11 +138,14 @@ public class Principal
                switch (aOpt) {
                   case "1": // crear cliente
                      try {
-                        String nombre = Utilitaria.ScannerUtil.capturarTexto("Ingrese nombre completo:");
-                        String telefono = Utilitaria.ScannerUtil.capturarTexto("Ingrese teléfono:");
-                        String fechaStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese fecha de nacimiento (YYYY-MM-DD):");
+                        String nombre = Utilitaria.ScannerUtil.capturarTextoCancelable("Ingrese nombre completo:");
+                        if (nombre == null) { System.out.println("Operación cancelada."); break; }
+                        String telefono = Utilitaria.ScannerUtil.capturarTextoCancelable("Ingrese teléfono:");
+                        if (telefono == null) { System.out.println("Operación cancelada."); break; }
+                        String fechaStr = Utilitaria.ScannerUtil.capturarTextoCancelable("Ingrese fecha de nacimiento (YYYY-MM-DD):");
+                        if (fechaStr == null) { System.out.println("Operación cancelada."); break; }
                         java.time.LocalDate fecha = java.time.LocalDate.parse(fechaStr);
-                        Cliente nuevo = admin.crearClienteAuto(nombre, telefono, fecha);//el ID se asigna automáticamente
+                        Cliente nuevo = admin.crearClienteAuto(nombre, telefono, fecha);
                         System.out.println("Cliente creado: " + nuevo.getNombreCompleto() + " (ID: " + nuevo.getIdCliente() + ")");
                      } catch (RuntimeException e) {
                         System.out.println("Error: " + e.getMessage());
@@ -144,8 +153,9 @@ public class Principal
                      break;
                   case "2": // eliminar cliente
                      try {
-                        String id = Utilitaria.ScannerUtil.capturarTexto("Ingrese ID del cliente a eliminar:");
-                        String confirma = Utilitaria.ScannerUtil.capturarTexto("Confirma eliminar el cliente " + id + "? (si/no):");
+                        String id = Utilitaria.ScannerUtil.capturarTextoCancelable("Ingrese ID del cliente a eliminar:");
+                        if (id == null) { System.out.println("Operación cancelada."); break; }
+                        String confirma = Utilitaria.ScannerUtil.capturarTextoCancelable("Confirma eliminar el cliente " + id + "? (si/no):");
                         if (confirma != null && confirma.trim().equalsIgnoreCase("si")) {
                            boolean ok = admin.eliminarCliente(id);
                            System.out.println(ok ? "Cliente eliminado." : "Cliente no encontrado.");//si ok es true, se imprime cliente eliminado, si es false, se imprime cliente no encontrado
@@ -158,9 +168,18 @@ public class Principal
                      break;
                   case "3": // crear cuenta
                      try {
-                        String idCliente = Utilitaria.ScannerUtil.capturarTexto("Ingrese ID del titular (para confirmar):");
-                        String tipoStr = Utilitaria.ScannerUtil.capturarTexto("Ingrese tipo de cuenta (AHORRO/MONETARIA):");
-                        Enums.TipoCuenta tipo = Enums.TipoCuenta.valueOf(tipoStr.toUpperCase());//convierte el string a enum, ignorando mayusculas o minusculas
+                        String idCliente = Utilitaria.ScannerUtil.capturarTextoCancelable("Ingrese ID del titular (para confirmar):");
+                        if (idCliente == null) { System.out.println("Operación cancelada."); break; }
+                        idCliente = idCliente.trim();
+                        // verificar existencia en ControlClientes.txt antes de solicitar más datos
+                        java.util.Map<String, String> clientesMap = Servicios.Reportes.leerTodasLineasClientes();
+                        if (!clientesMap.containsKey(idCliente)) {
+                            System.out.println("Cliente no encontrado en ControlClientes.txt. Regresando al menú de administración.");
+                            break; // volver al menú administrativo sin pedir más campos
+                        }
+                        String tipoStr = Utilitaria.ScannerUtil.capturarTextoCancelable("Ingrese tipo de cuenta (AHORRO/MONETARIA):");
+                        if (tipoStr == null) { System.out.println("Operación cancelada."); break; }
+                        Enums.TipoCuenta tipo = Enums.TipoCuenta.valueOf(tipoStr.toUpperCase());
                         admin.crearCuentaPorIdAuto(tipo, idCliente);
                      } catch (RuntimeException e) {
                         System.out.println("Error: " + e.getMessage());
@@ -168,8 +187,9 @@ public class Principal
                      break;
                   case "4": // eliminar cuenta
                      try {
-                        String numero = capturarSinEspacios("Ingrese número de cuenta a eliminar:");
-                        String confirmaC = Utilitaria.ScannerUtil.capturarTexto("Confirma eliminar la cuenta " + numero + "? (si/no):");
+                        String numero = Utilitaria.ValidacionEntrada.solicitarCuentaValida(atm, "Ingrese número de cuenta a eliminar (o 'salir' para cancelar):");
+                        if (numero == null) { System.out.println("Operación cancelada."); break; }
+                        String confirmaC = Utilitaria.ScannerUtil.capturarTextoCancelable("Confirma eliminar la cuenta " + numero + "? (si/no):");
                         if (confirmaC != null && confirmaC.trim().equalsIgnoreCase("si")) {//si el usuario confirma que quiere eliminar la cuenta
                            boolean ok = admin.eliminarCuenta(numero);
                            System.out.println(ok ? "Cuenta eliminada." : "Cuenta no encontrada.");//si ok es true, se imprime cuenta eliminada, si es false, se imprime cuenta no encontrada

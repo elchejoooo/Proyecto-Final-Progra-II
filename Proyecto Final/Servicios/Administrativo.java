@@ -35,43 +35,44 @@ public class Administrativo
 	public void cargarDesdeArchivos() {
 		// Cargar clientes
 		java.util.Map<String, String> clientesLines = Reportes.leerTodasLineasClientes();
-		long maxId = 0L;
-		for (String line : clientesLines.values()) {
+		long maxId = 0L;//el id mas alto entre todos los clientes cargados, esto sirve para asegurar que el siguiente id generado sea mayor a este
+		for (String linea : clientesLines.values()) {
 			try {
-				String[] parts = line.split("\\|");
+				String[] parts = linea.split("\\|");
 				// esperamos: idCliente|nombreCompleto|telefono|fechaNacimiento
 				if (parts.length < 4) continue;
 				String id = parts[0];
 				String nombre = parts[1];
 				String telefono = parts[2];
 				java.time.LocalDate fecha = java.time.LocalDate.parse(parts[3]);
-				Cliente c = new Cliente(id, nombre, telefono, fecha);
-				this.clientes.add(c);
+				Cliente clienteCargar = new Cliente(id, nombre, telefono, fecha);
+				this.clientes.add(clienteCargar);
 				try { long v = Long.parseLong(id); if (v > maxId) maxId = v; } catch (NumberFormatException ex) { }
 			} catch (Exception ex) {
 				// ignorar linea mal formada
+				System.out.println("Error al cargar cliente: " + ex.getMessage());
 			}
 		}
-		this.nextClienteId = Math.max(this.nextClienteId, maxId + 1);
+		this.nextClienteId = Math.max(this.nextClienteId, maxId + 1);//aseguranos de que el siguiente id sea mayor al maximo ya cargado
 
 		// Cargar cuentas
 		java.util.Map<String, String> cuentasLines = Reportes.leerTodasLineasCuentas();
-		long maxCuentaId = 0L;
+		long maxCuentaId = 0L;//el id mas alto entre las cuentas cargadas
 		for (String line : cuentasLines.values()) {
 			try {
-				String[] parts = line.split("\\|");
-				if (parts.length < 5) continue;
-				String numero = parts[0];
-				String nombreTitular = parts[1];
-				String idCliente = parts[2];
-				Enums.TipoCuenta tipo = Enums.TipoCuenta.valueOf(parts[3]);
+				String[] parteCarga = line.split("\\|");
+				if (parteCarga.length < 5) continue;
+				String numero = parteCarga[0];
+				String nombreTitular = parteCarga[1];
+				String idCliente = parteCarga[2];
+				Enums.TipoCuenta tipo = Enums.TipoCuenta.valueOf(parteCarga[3]);
 				String pin = "0000";
 				String saldoStr = "0";
-				if (parts.length == 5) {
-					saldoStr = parts[4].replace(',', '.');
-				} else if (parts.length >= 6) {
-					pin = parts[4];
-					saldoStr = parts[5].replace(',', '.');
+				if (parteCarga.length == 5) {
+					saldoStr = parteCarga[4].replace(',', '.');
+				} else if (parteCarga.length >= 6) {
+					pin = parteCarga[4];
+					saldoStr = parteCarga[5].replace(',', '.');
 				}
 				double saldo = 0.0;
 				try { saldo = Double.parseDouble(saldoStr); } catch (NumberFormatException e) { }
@@ -80,36 +81,43 @@ public class Administrativo
 					titular = new Cliente(idCliente, nombreTitular, "", java.time.LocalDate.of(1970,1,1));
 					this.clientes.add(titular);
 				}
-				Cuenta c = crearCuenta(numero, pin, tipo, titular);
+				Cuenta cuentaCrear = crearCuenta(numero, pin, tipo, titular);
 				// establecer saldo inicial sin crear transacciones importadas; las transacciones
 				// reales se cargarán desde HistorialTransacciones.txt más abajo
 				if (saldo > 0.0) {
-					try { c.cargarSaldoInicial(saldo); } catch (Exception ex) { /* ignore invalid saldo */ }
+					try { cuentaCrear.cargarSaldoInicial(saldo); } catch (Exception ex) 
+					{ 
+						System.out.println("Error al cargar saldo inicial para cuenta " + numero + ": " + ex.getMessage());
+					}
 				}
 				try { long v = Long.parseLong(numero); if (v > maxCuentaId) maxCuentaId = v; } catch (NumberFormatException ex) { }
-			} catch (Exception ex) {
+			} catch (Exception ex) 
+			{
 				// ignorar linea mal formada
+				System.out.println("Error al cargar cuenta: " + ex.getMessage());
 			}
 		}
 		this.nextCuentaId = Math.max(this.nextCuentaId, maxCuentaId + 1);
 
 		// Cargar transacciones y asociarlas a cuentas/ATM
 		java.util.List<String> txLines = Reportes.leerTodasLineasTransacciones();
-		for (String line : txLines) {
-			try {
-				String[] p = line.split("\\|");
-				if (p.length < 5) continue;
-				String idTx = p[0];
-				String numCuenta = p[1];
-				Enums.TipoTransaccion tipo = Enums.TipoTransaccion.valueOf(p[2]);
-				double monto = Double.parseDouble(p[3].replace(',', '.'));
-				java.time.LocalDateTime fecha = java.time.LocalDateTime.parse(p[4]);
-				Modelos.Transaccion t = new Modelos.Transaccion(tipo, monto, numCuenta, idTx, fecha);
-				if (this.atm != null) this.atm.agregarTransaccion(t);
-				Cuenta cu = null;
-				for (Cuenta cc : this.cuentas) if (cc.getNumeroCuenta().equals(numCuenta)) { cu = cc; break; }
-				if (cu != null) {
-					try { cu.agregarTransaccion(t); } catch (Exception ex) { }
+		for (String line : txLines) 
+		{
+			try 
+			{
+				String[] parteLeerDesdeArchivos = line.split("\\|");
+				if (parteLeerDesdeArchivos.length < 5) continue;
+				String idTx = parteLeerDesdeArchivos[0];
+				String numCuenta = parteLeerDesdeArchivos[1];
+				Enums.TipoTransaccion tipo = Enums.TipoTransaccion.valueOf(parteLeerDesdeArchivos[2]);
+				double monto = Double.parseDouble(parteLeerDesdeArchivos[3].replace(',', '.'));
+				java.time.LocalDateTime fecha = java.time.LocalDateTime.parse(parteLeerDesdeArchivos[4]);
+				Modelos.Transaccion transaccionLeer = new Modelos.Transaccion(tipo, monto, numCuenta, idTx, fecha);
+				if (this.atm != null) this.atm.agregarTransaccion(transaccionLeer);
+				Cuenta cuentaTransaccion = null;
+				for (Cuenta cc : this.cuentas) if (cc.getNumeroCuenta().equals(numCuenta)) { cuentaTransaccion = cc; break; }
+				if (cuentaTransaccion != null) {
+					try { cuentaTransaccion.agregarTransaccion(transaccionLeer); } catch (Exception ex) { }
 				}
 			} catch (Exception ex) { }
 		}
@@ -121,15 +129,17 @@ public class Administrativo
 	public Cliente crearCliente(String idCliente, String nombreCompleto, String telefono, java.time.LocalDate fechaNacimiento)
 	{
 		// Validar que no exista otro cliente con mismo telefono y fechaNacimiento
-		for (Cliente existente : this.clientes) {
-			if (existente.getTelefono().equals(telefono) && existente.getFechaNacimiento().equals(fechaNacimiento)) {
+		for (Cliente existente : this.clientes) 
+		{
+			if (existente.getTelefono().equals(telefono) && existente.getFechaNacimiento().equals(fechaNacimiento)) 
+			{
 				throw new RuntimeException("Ya existe un cliente con ese teléfono y fecha de nacimiento.");
 			}
 		}
-		Cliente c = new Cliente(idCliente, nombreCompleto, telefono, fechaNacimiento);//aqui se crea el cliente, se envia a el constructor de Cliente
-		clientes.add(c);
+		Cliente clienteCrear = new Cliente(idCliente, nombreCompleto, telefono, fechaNacimiento);//aqui se crea el cliente, se envia a el constructor de Cliente
+		clientes.add(clienteCrear);
 		try { Reportes.guardarTodosClientes(this.clientes); } catch (Exception ex) { }// no bloquear si falla el guardado, mas bien se intenta nuevamente en el futuro cuando se cree otro cliente
-		return c;
+		return clienteCrear;
 	}
 
 	/** Genera un identificador único para un nuevo cliente. */
@@ -165,8 +175,8 @@ public class Administrativo
 	}
 
 	/** Genera un número de cuenta único (incremental). */
-	public synchronized String generarNumeroCuenta()
-	{
+	public synchronized String generarNumeroCuenta()//synchronized significa que solo un hilo puede ejecutar este metodo a la vez
+	{// el no tener synchronized podria causar que dos cuentas obtengan el mismo numero de cuenta en entornos multihilo
 	// Generar un número de cuenta secuencial formateado a 12 dígitos (con ceros a la izquierda)
 	String numero = String.format("%012d", this.nextCuentaId);//formatea el numero de cuenta a 12 digitos, si es menor se le agregan ceros a la izquierda
 	this.nextCuentaId++;
@@ -188,8 +198,8 @@ public class Administrativo
 	public boolean eliminarCliente(String idCliente)
 	{
 		Cliente objetivo = null;
-		for (Cliente c : clientes) {
-			if (c.getIdCliente().equals(idCliente)) { objetivo = c; break; }//esto indica que se encontro el cliente a eliminar
+		for (Cliente clientePorEliminar : clientes) {
+			if (clientePorEliminar.getIdCliente().equals(idCliente)) { objetivo = clientePorEliminar; break; }//esto indica que se encontro el cliente a eliminar
 		}
 		if (objetivo == null) return false;
 
@@ -224,11 +234,11 @@ public class Administrativo
 		return cuenta;
 	}
 
-	/** Busca un cliente por su ID (exact match) */
+	/** Busca un cliente por su ID (que sea identico) */
 	public Cliente buscarClientePorId(String idCliente) {
 		if (idCliente == null) return null;
-		for (Cliente c : clientes) {
-			if (c.getIdCliente().equals(idCliente)) return c;
+		for (Cliente clientePorBuscar : clientes) {
+			if (clientePorBuscar.getIdCliente().equals(idCliente)) return clientePorBuscar;
 		}
 		return null;
 	}
@@ -259,8 +269,8 @@ public class Administrativo
 	public boolean eliminarCuenta(String numeroCuenta)
 	{
 		Cuenta objetivo = null;
-		for (Cuenta c : cuentas) {
-			if (c.getNumeroCuenta().equals(numeroCuenta)) { objetivo = c; break; }//esto indica que se encontro la cuenta a eliminar
+		for (Cuenta cuentaPorEliminar : cuentas) {
+			if (cuentaPorEliminar.getNumeroCuenta().equals(numeroCuenta)) { objetivo = cuentaPorEliminar; break; }//esto indica que se encontro la cuenta a eliminar
 		}
 		if (objetivo == null) return false;
 
@@ -273,7 +283,6 @@ public class Administrativo
 		// quitar del ATM
 		if (this.atm != null) {
 			this.atm.cerrarSesion(); // asegurar que no hay sesión abierta con esa cuenta
-			this.atm.desbloquearCuenta(numeroCuenta); // limpiar intentos
 			// no hay método para desregistrar explícito, pero quitar de la lista local evita su uso
 		}
 

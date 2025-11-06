@@ -45,7 +45,8 @@ public class Cuenta
     }
 
     /**
-     * Registra una transacción en el historial
+     * Registra una transacción en el historial.
+     * Si la transaccion es nula, lanza la excepcion.
      */
     public void agregarTransaccion(Transaccion transaccion) 
     {
@@ -123,6 +124,7 @@ public class Cuenta
     }
 
     // protected porque solo se modifica internamente mediante operaciones
+    //eso significa que no puede ser modificado desde fuera de la clase o paquete
     protected void setSaldo(double saldo) {
         this.saldo = saldo;
     }
@@ -140,6 +142,11 @@ public class Cuenta
         return tipoCuenta;
     }
 
+    /**
+     * Aqui no se permite cambiar el tipo de cuenta despues de creada.
+     * El tipo de cuenta no puede quedar vacio ya que es un campo oblicatorio por la verificacion implementada.
+     * 
+     */
     public void setTipoCuenta(TipoCuenta tipoCuenta) {
         if (tipoCuenta == null)
             throw new CampoInvalidoExcepcion("El tipo de cuenta no puede ser nulo.");
@@ -150,6 +157,9 @@ public class Cuenta
         return titular;
     }
 
+    /**
+     * No se permite 
+     */
     public void setTitular(Cliente titular) {
         if (titular == null)
             throw new CampoInvalidoExcepcion("El titular de la cuenta no puede ser nulo.");

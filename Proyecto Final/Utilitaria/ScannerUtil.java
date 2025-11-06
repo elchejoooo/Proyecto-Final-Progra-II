@@ -18,6 +18,24 @@ public class ScannerUtil
        System.out.println(mensajeParaElUsuario);
        return scanner.nextLine(); 
     }
+
+     /**
+      * Captura texto y devuelve null si el usuario ingresa la palabra especial "salir".
+      */
+     public static String capturarTextoCancelable(String mensajeParaElUsuario)
+     {
+        // evitar duplicar la sugerencia si el prompt ya la contiene
+        String lower = mensajeParaElUsuario == null ? "" : mensajeParaElUsuario.toLowerCase();
+        if (lower.contains("salir")) {
+            System.out.println(mensajeParaElUsuario);
+        } else {
+            System.out.println(mensajeParaElUsuario + " (o escriba 'salir' para cancelar)");
+        }
+         String s = scanner.nextLine();
+         if (s == null) return null;
+         if (s.trim().equalsIgnoreCase("salir")) return null;
+         return s;
+     }
     /**
      * este metodo captura un entero ingresado por el usuario
      * @param mensajeParaElUsuario es lo que se le muestra al usuario
@@ -43,14 +61,44 @@ public class ScannerUtil
     public static double capturarDouble(String mensajeParaElUsuario)
     {
           System.out.print(mensajeParaElUsuario);
-            while (!scanner.hasNextInt()) 
-            {
-            System.out.println("Entrada inválida. Por favor, ingrese un número entero.");
-            scanner.next(); 
+            // leer como texto y normalizar separador decimal para evitar bloqueos del scanner
+            while (true) {
+                String s = scanner.nextLine();
+                if (s == null) throw new RuntimeException("Entrada cancelada");
+                s = s.trim().replace(',', '.');
+                try {
+                    double numero = Double.parseDouble(s);
+                    return numero;
+                } catch (NumberFormatException ex) {
+                    System.out.println("Entrada inválida. Por favor, ingrese un número (use . o , como separador decimal).");
+                }
             }
-        double numero = scanner.nextDouble();
-        scanner.nextLine(); 
-        return numero;
+    }
+
+    /**
+     * Captura un double con posibilidad de cancelar escribiendo 'salir'.
+     * Devuelve null si se cancela.
+     */
+    public static Double capturarDoubleCancelable(String mensajeParaElUsuario)
+    {
+        // evitar duplicar la sugerencia si el prompt ya contiene 'salir'
+        String lower = mensajeParaElUsuario == null ? "" : mensajeParaElUsuario.toLowerCase();
+        if (lower.contains("salir")) {
+            System.out.print(mensajeParaElUsuario + ": ");
+        } else {
+            System.out.print(mensajeParaElUsuario + " (o escriba 'salir' para cancelar): ");
+        }
+        while (true) {
+            String s = scanner.nextLine();
+            if (s == null) return null;
+            if (s.trim().equalsIgnoreCase("salir")) return null;
+            s = s.trim().replace(',', '.');
+            try {
+                return Double.parseDouble(s);
+            } catch (NumberFormatException ex) {
+                System.out.println("Entrada inválida. Por favor, ingrese un número (use . o , como separador decimal) o 'salir' para cancelar.");
+            }
+        }
     }
     /**
      * Este metodo nos ayuda a capturar un TipoTransaccion que ingrese el usuario.

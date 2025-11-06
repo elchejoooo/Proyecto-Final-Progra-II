@@ -7,22 +7,21 @@ import Modelos.Transaccion;
 import Modelos.Cuenta;
 import Excepciones.CuentaNoEncontradaExcepcion;
 import Excepciones.PinInvalidoExcepcion;
-// SesionNoIniciadaExcepcion removed import (no longer used after cleanup)
+
 
 public class ATM 
 {
     private List<Transaccion> listaTransacciones;
     private java.util.Map<String, Cuenta> cuentas;
     private Cuenta cuentaActiva; // sesión actual
-    private java.util.Map<String, Integer> intentosFallidos;
-    private final int MAX_INTENTOS = 3;
+    // removed attempt-tracking: PIN attempts are not limited
 
     public ATM()
     {
         this.listaTransacciones = new ArrayList<>();
         this.cuentas = new java.util.HashMap<>();
         this.cuentaActiva = null;
-    this.intentosFallidos = new java.util.HashMap<>();
+    // no attempt tracking to initialize
     }
 
     /**
@@ -34,48 +33,46 @@ public class ATM
         this.cuentas.put(cuenta.getNumeroCuenta(), cuenta);
     }
 
-    // iniciarSesion removed: session-based flows are unused in the current CLI
+   
 
     /**
-     * Desbloquea los intentos fallidos para una cuenta (ej: administrador)
-     */
-    public void desbloquearCuenta(String numeroCuenta)
-    {
-        this.intentosFallidos.remove(numeroCuenta);// resetea el contador de intentos fallidos
-    }
-
-    public int getIntentosFallidos(String numeroCuenta)
-    {
-        return this.intentosFallidos.getOrDefault(numeroCuenta, 0);
-    }
-
-    /**
-     * Valida PIN para operaciones puntuales (no inicia sesión). Actualiza contador de intentos.
+     * Valida PIN para operaciones puntuales (no inicia sesión).
+     * Si el PIN es incorrecto lanza PinInvalidoExcepcion; no hay conteo ni bloqueo.
      */
     private void validarPinParaOperacion(String numeroCuenta, String pin)
     {
-        Cuenta c = this.cuentas.get(numeroCuenta);
-        if (c == null)
+        Cuenta cuentaPorValidar = this.cuentas.get(numeroCuenta);
+        if (cuentaPorValidar == null)
             throw new CuentaNoEncontradaExcepcion(numeroCuenta);
 
-        int intentos = this.intentosFallidos.getOrDefault(numeroCuenta, 0);
-        if (intentos >= MAX_INTENTOS) {
-            throw new PinInvalidoExcepcion("La cuenta " + numeroCuenta + " está bloqueada por múltiples intentos fallidos.");
+        if (!cuentaPorValidar.getPin().equals(pin)) {
+            throw new PinInvalidoExcepcion("PIN inválido.");
         }
+    }
 
-        if (!c.getPin().equals(pin)) {
-            intentos++;
-            this.intentosFallidos.put(numeroCuenta, intentos);
-            int restantes = MAX_INTENTOS - intentos;
-            if (restantes <= 0) {
-                throw new PinInvalidoExcepcion("PIN inválido. La cuenta ha sido bloqueada tras " + MAX_INTENTOS + " intentos fallidos.");
-            } else {
-                throw new PinInvalidoExcepcion("PIN inválido. Intentos restantes: " + restantes);
-            }
+    /**
+     * Verifica el PIN pero sin contar intentos ni bloquear la cuenta.
+     * Devuelve true si el PIN es correcto, false si es incorrecto o la cuenta no existe.
+     */
+    public boolean verificarPinSinBloqueo(String numeroCuenta, String pin) {
+        Cuenta cuentaPorValidar = this.cuentas.get(numeroCuenta);
+        if (cuentaPorValidar == null) return false;
+        return cuentaPorValidar.getPin().equals(pin);
+    }
+
+    /**
+     * Devuelve true si la cuenta existe en el ATM.
+     */
+    public boolean existeCuenta(String numeroCuenta) {
+        if (numeroCuenta == null) return false;
+        if (this.cuentas.containsKey(numeroCuenta)) return true;
+        // Si no está en memoria, comprobar archivo de control por si fue creado manualmente
+        try {
+            java.util.Map<String, String> lines = Reportes.leerTodasLineasCuentas();
+            return lines.containsKey(numeroCuenta);
+        } catch (Exception ex) {
+            return false;
         }
-
-        // PIN correcto: resetear contador
-        this.intentosFallidos.remove(numeroCuenta);
     }
 
     public void cerrarSesion()
@@ -88,7 +85,7 @@ public class ATM
         return this.cuentaActiva != null;
     }
 
-    // getCuentaActiva removed: not used by external code
+    
 
     public void agregarTransaccion(Transaccion transaccion)
     {
@@ -100,16 +97,16 @@ public class ATM
      */
     public void depositar(String numeroCuenta, double monto, String idTransaccion)
     {
-        Cuenta c = this.cuentas.get(numeroCuenta);
-        if (c == null)
+        Cuenta cuentaParaDepositar = this.cuentas.get(numeroCuenta);
+        if (cuentaParaDepositar == null)
             throw new CuentaNoEncontradaExcepcion(numeroCuenta);
 
-        Transaccion t = new Transaccion(Enums.TipoTransaccion.DEPOSITO, monto, numeroCuenta, idTransaccion);//aqui se crea la transaccion al enviar los datos del tipo de transaccion, monto, numero de cuenta y id unico
-        c.aplicarDeposito(monto, t);
-        agregarTransaccion(t);
+        Transaccion transaccionDeposito = new Transaccion(Enums.TipoTransaccion.DEPOSITO, monto, numeroCuenta, idTransaccion);//aqui se crea la transaccion al enviar los datos del tipo de transaccion, monto, numero de cuenta y id unico
+        cuentaParaDepositar.aplicarDeposito(monto, transaccionDeposito);
+        agregarTransaccion(transaccionDeposito);
     // actualizar archivo de control de cuentas y anexar transaccion
     try { Reportes.guardarTodasCuentas(new ArrayList<>(this.cuentas.values())); } catch (Exception ex) { }
-    try { Reportes.appendTransaccion(t); } catch (Exception ex) { }
+    try { Reportes.appendTransaccion(transaccionDeposito); } catch (Exception ex) { }
     }
 
     /**
@@ -126,16 +123,16 @@ public class ATM
      */
     public void retirar(String numeroCuenta, double monto, String idTransaccion)
     {
-        Cuenta c = this.cuentas.get(numeroCuenta);
-        if (c == null)
+        Cuenta cuentaPorRetirar = this.cuentas.get(numeroCuenta);
+        if (cuentaPorRetirar == null)
             throw new CuentaNoEncontradaExcepcion(numeroCuenta);//verifica que la cuenta exista, sino lanza la excepcion
 
-        Transaccion t = new Transaccion(Enums.TipoTransaccion.RETIRO, monto, numeroCuenta, idTransaccion);//se envian daytos de la trnasaccion, se crea la transaccion
-        c.aplicarRetiro(monto, t);
-        agregarTransaccion(t);
+        Transaccion transaccionRetiro = new Transaccion(Enums.TipoTransaccion.RETIRO, monto, numeroCuenta, idTransaccion);//se envian daytos de la trnasaccion, se crea la transaccion
+        cuentaPorRetirar.aplicarRetiro(monto, transaccionRetiro);
+        agregarTransaccion(transaccionRetiro);
     // actualizar archivo de control de cuentas y anexar transaccion
     try { Reportes.guardarTodasCuentas(new ArrayList<>(this.cuentas.values())); } catch (Exception ex) { }
-    try { Reportes.appendTransaccion(t); } catch (Exception ex) { }
+    try { Reportes.appendTransaccion(transaccionRetiro); } catch (Exception ex) { }
     }
 
     /**
@@ -152,10 +149,10 @@ public class ATM
      */
     public double consultarSaldo(String numeroCuenta)
     {
-        Cuenta c = this.cuentas.get(numeroCuenta);
-        if (c == null)//verifica que la cuenta exista, sino lanza la excepcion
+        Cuenta cuentaConsultaSaldo = this.cuentas.get(numeroCuenta);
+        if (cuentaConsultaSaldo == null)//verifica que la cuenta exista, sino lanza la excepcion
             throw new CuentaNoEncontradaExcepcion(numeroCuenta);
-        return c.getSaldo();
+        return cuentaConsultaSaldo.getSaldo();
     }
 
     /**
@@ -180,17 +177,17 @@ public class ATM
             throw new CuentaNoEncontradaExcepcion(numeroDestino);
 
         // Retiro de origen y depósito en destino con transacciones separadas
-        Transaccion tRetiro = new Transaccion(Enums.TipoTransaccion.RETIRO, monto, numeroOrigen, idTransaccionOrigen);//aplica el retiro en la cuenta de origen
-        origen.aplicarRetiro(monto, tRetiro);//se aplica el retiro a la e origen
-        this.agregarTransaccion(tRetiro);
+        Transaccion transaccionRetiro = new Transaccion(Enums.TipoTransaccion.RETIRO, monto, numeroOrigen, idTransaccionOrigen);//aplica el retiro en la cuenta de origen
+        origen.aplicarRetiro(monto, transaccionRetiro);//se aplica el retiro a la e origen
+        this.agregarTransaccion(transaccionRetiro);
 
-        Transaccion tDep = new Transaccion(Enums.TipoTransaccion.DEPOSITO, monto, numeroDestino, idTransaccionDestino);
-        destino.aplicarDeposito(monto, tDep);//aplica deposito a la de destino
-        this.agregarTransaccion(tDep);
+        Transaccion transaccionDeposito = new Transaccion(Enums.TipoTransaccion.DEPOSITO, monto, numeroDestino, idTransaccionDestino);
+        destino.aplicarDeposito(monto, transaccionDeposito);//aplica deposito a la de destino
+        this.agregarTransaccion(transaccionDeposito);
     // actualizar archivo de control de cuentas y anexar transacciones
     try { Reportes.guardarTodasCuentas(new ArrayList<>(this.cuentas.values())); } catch (Exception ex) { }
-    try { Reportes.appendTransaccion(tRetiro); } catch (Exception ex) { }
-    try { Reportes.appendTransaccion(tDep); } catch (Exception ex) { }
+    try { Reportes.appendTransaccion(transaccionRetiro); } catch (Exception ex) { }
+    try { Reportes.appendTransaccion(transaccionDeposito); } catch (Exception ex) { }
     }
 
     /**
@@ -209,11 +206,11 @@ public class ATM
     
     public Transaccion buscarTransaccionPorId(String idTransaccion)
     {
-        for (Transaccion t : listaTransacciones) 
+        for (Transaccion transaccionBuscar : listaTransacciones) 
         {
-            if (t.getIdTransaccion().equals(idTransaccion)) // si encuentra la transaccion con el id buscado
+            if (transaccionBuscar.getIdTransaccion().equals(idTransaccion)) // si encuentra la transaccion con el id buscado
             {
-                return t;
+                return transaccionBuscar;
             }
         }
         return null; // Si no
@@ -236,22 +233,22 @@ public class ATM
             return;
         }
 
-        for (java.util.Map.Entry<String, java.util.List<Transaccion>> entry : porCuenta.entrySet()) {// aqui se recorre cada entrada del hashmap
-            String numeroCuenta = entry.getKey();// se obtiene el numero de la cuenta
-            java.util.List<Transaccion> transacciones = entry.getValue();// se obtiene la lista de transacciones de esa cuenta
+        for (java.util.Map.Entry<String, java.util.List<Transaccion>> entrada : porCuenta.entrySet()) {// aqui se recorre cada entrada del hashmap
+            String numeroCuenta = entrada.getKey();// se obtiene el numero de la cuenta
+            java.util.List<Transaccion> transacciones = entrada.getValue();// se obtiene la lista de transacciones de esa cuenta
 
             System.out.println("====================================");
             System.out.println("Resumen para la cuenta: " + numeroCuenta);
             System.out.println("Número de transacciones: " + transacciones.size());
 
             // Mostrar cada transacción usando el método de la clase Transaccion
-            for (Transaccion t : transacciones) {
-                System.out.println(t.mostrarDetallesTransaccion());
+            for (Transaccion transaccionMostrar : transacciones) {
+                System.out.println(transaccionMostrar.mostrarDetallesTransaccion());
             }
         }
     }
 
     
-    // removed authenticated convenience methods (unused)
+    
 
 }
