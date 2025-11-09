@@ -228,8 +228,11 @@ public class Principal
     
    }     
 
-   // Helper: captura texto que no contenga espacios. Si se provee allowIfEquals, se permite
-   // esa palabra especial (por ejemplo 'volver') incluso si el usuario la escribe con mayúsculas.
+   /**
+    * Captura texto sin espacios en blanco, repitiendo el prompt hasta que se ingrese un valor válido o se cancele.
+    * Este metodo sirve para capturar entradas como PINs donde no se permiten espacios. Porque si el usuario ingresa espacios, se le pide que ingrese nuevamente.
+    * Es util ya que en PINs no se permiten espacios.
+    */
    private static String capturarSinEspacios(String prompt) {
       return capturarSinEspacios(prompt, null);//esto indica que no hay palabra especial permitida
       //eso significa que el usuario no puede ingresar ninguna palabra especial como por ejemplo la palabra 'volver' o 'cancelar'
@@ -238,7 +241,7 @@ public class Principal
    private static String capturarSinEspacios(String prompt, String allowIfEquals) {
       while (true) {
          String entrada = Utilitaria.ScannerUtil.capturarTexto(prompt);
-         if (entrada == null) return null; // usuario canceló (EOF) osea no ingreso nada
+         if (entrada == null) return null; // usuario canceló osea no ingreso nada
          //si el usuario ingresa null, se retorna null y se maneja en el menu principal
          //de esta forma si el usuario ingresa null en cualquier menu, se sale del programa
          String trimmed = entrada.trim();//aqui se quitan los espacios al inicio y al final

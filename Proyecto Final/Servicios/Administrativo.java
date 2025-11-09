@@ -28,10 +28,10 @@ public class Administrativo
 	/** Constructor alterno: carga clientes y cuentas desde archivos de control si existen */
 	public Administrativo(ATM atm, boolean cargarDesdeArchivos) {
 		this(atm);
-		// loading has been moved to cargarDesdeArchivos() to avoid 'this' escape in constructor
+		
 	}
 
-	/** Load persisted clients, accounts and transactions from control files. */
+	/** aqui se cargan desde el archivo los clientes */
 	public void cargarDesdeArchivos() {
 		// Cargar clientes
 		java.util.Map<String, String> clientesLines = Reportes.leerTodasLineasClientes();

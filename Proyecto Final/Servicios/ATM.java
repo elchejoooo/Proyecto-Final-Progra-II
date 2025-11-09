@@ -14,14 +14,14 @@ public class ATM
     private List<Transaccion> listaTransacciones;
     private java.util.Map<String, Cuenta> cuentas;
     private Cuenta cuentaActiva; // sesión actual
-    // removed attempt-tracking: PIN attempts are not limited
+   
 
     public ATM()
     {
         this.listaTransacciones = new ArrayList<>();
         this.cuentas = new java.util.HashMap<>();
         this.cuentaActiva = null;
-    // no attempt tracking to initialize
+    
     }
 
     /**
